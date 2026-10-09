@@ -1,6 +1,6 @@
 /* Offline UI translations. Artwork and profile names are not translated. */
 globalThis.PenTranslations={
-  "拓竹写字机": "Bambu Pen Studio",
+  "拓竹写字机": "Bambu Pen",
   "绘图工作区": "Drawing workspace",
   "主导航": "Main navigation",
   "创作": "Create",
@@ -731,7 +731,7 @@ globalThis.PenTranslations={
   "纸张左上角：": "Paper top-left: ",
   "在定位网格内。": "Inside the registration grid.",
   "当前范围": "current bounds",
-  "拓竹写字机 0.20.0 · Windows 64 位 · 独立绘图工具": "Bambu Pen Studio 0.20.0 · Windows x64 · Independent drawing tool",
+  "拓竹写字机 0.20.0 · Windows 64 位 · 独立绘图工具": "Bambu Pen 0.20.0 · Windows x64 · Independent drawing tool",
   "后方 / BACK": "BACK",
   "前方 / FRONT": "FRONT",
   "喷嘴机器坐标 · X → / Y ↑": "Nozzle coordinates · X → / Y ↑",

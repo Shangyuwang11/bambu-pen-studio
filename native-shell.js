@@ -13,7 +13,7 @@
  function button(name,label,id){const b=make('button','');b.type='button';if(id)b.id=id;iconButton(b,name,label);return b;}
  function go(name,chosen=true){if(name==='calibration'&&window.PenCalibration&&!PenCalibration.canOpen())return false;if(chosen)routeChosen=true;PenSimpleUI.page(name);hideTip();return true;}
  // The window's native controls live in Electron's title-bar overlay.
- const header=document.querySelector('header');header.classList.add('shell-title');document.querySelector('.brand small').remove();document.querySelector('.brand strong').innerHTML='拓竹写字机 <span>绘图工作区</span>';document.querySelector('.brand-mark').replaceChildren(I('pen'));
+ const header=document.querySelector('header');header.classList.add('shell-title');document.querySelector('.brand small').remove();document.querySelector('.brand strong').innerHTML='Bambu Pen <span>v'+(window.PenDesktopAPI?.version||'0.21.0')+'</span>';document.querySelector('.brand-mark').innerHTML='<img src="assets/app-icon.svg" alt="">';
  const workflow=document.querySelector('.workflow'),rail=make('nav','app-rail');rail.setAttribute('aria-label','主导航');const nav=make('div','rail-pages'),bottom=make('div','rail-bottom');rail.append(nav,bottom);
  const printerNav=button('printer','打印机','stepPrinter'),calibrationNav=button('target','校准与高度微调','stepCalibration');const navItems=[[$('stepDesign'),'canvas','绘图与发送','design'],[printerNav,'printer','打印机','devices'],[calibrationNav,'target','校准与高度微调','calibration']];
  for(const [b,icon,label,page]of navItems){iconButton(b,icon,label);b.onclick=()=>go(page);b.classList.add('rail-page');const caption=make('span','rail-label');caption.textContent={design:'绘图',devices:'打印机',calibration:'校准'}[page];b.append(caption);nav.append(b);}

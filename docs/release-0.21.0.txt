@@ -1,0 +1,17 @@
+Bambu Pen 0.21.0
+
+中文
+- 应用统一命名 Bambu Pen。新图标不包含文字；窗口、启动器和 Windows 程序资源使用一致的名称与图标。
+- 左下角新增设置入口（Ctrl+,），集中管理外观与语言、软件更新、数据与文件和版本信息。
+- 新增浅色、深色、跟随系统主题，自动保存并在启动时恢复；切换语言保留主题设置。
+- 使用原来的数据目录、打印机资料、作品与校准配置，不因软件改名而重新建立空白配置。
+- 更新安装包沿用旧版可识别的发布文件名，保证 0.20.1 / 0.20.2 可以发现新版。
+
+English
+- Renamed to Bambu Pen with an original text-free icon and matching Windows executable resources.
+- Settings (lower-left icon or Ctrl+,) groups appearance, language, updates, local data and version information.
+- Light, Dark and System themes persist across launches, independently of language.
+- Existing projects, printer credentials and calibration profiles keep their original data location.
+- Release asset naming remains compatible with earlier in-app updaters.
+
+Windows 10/11 x64. Live control: A1 mini. A1 and P1S: layout and export only.

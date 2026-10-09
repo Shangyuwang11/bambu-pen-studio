@@ -13,7 +13,7 @@ async function main(){
  const notes=fs.readFileSync(path.join(root,'docs',`release-${version}.txt`),'utf8');
  const releases=await request(base+'/releases?per_page=100');let release=releases.find(r=>r.tag_name===tag);
  if(release&&!release.draft)throw Error('This version is already published. Increment the version rather than replace public assets.');
- if(!release)release=await request(base+'/releases','POST',{tag_name:tag,target_commitish:commit,name:'Bambu Pen Studio '+version,body:notes,draft:true,prerelease:false});
+ if(!release)release=await request(base+'/releases','POST',{tag_name:tag,target_commitish:commit,name:'Bambu Pen '+version,body:notes,draft:true,prerelease:false});
  for(const assetName of [name,'SHA256SUMS.txt']){
   const data=fs.readFileSync(path.join(root,'dist',assetName)),sha=crypto.createHash('sha256').update(data).digest('hex');const existing=release.assets.find(a=>a.name===assetName);
   if(existing){if(existing.digest!=='sha256:'+sha)throw Error('Draft has a different asset. Review it before publishing.');continue;}

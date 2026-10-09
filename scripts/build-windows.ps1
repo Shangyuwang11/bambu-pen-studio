@@ -1,4 +1,4 @@
-param([string]$ElectronRuntime)
+param([string]$ElectronRuntime,[string]$Rcedit)
 $ErrorActionPreference='Stop'
 $taskRoot=[System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $buildRoot=[System.IO.Path]::GetFullPath((Join-Path $taskRoot 'build'))
@@ -19,6 +19,8 @@ function Assert-BuildPath([string]$candidate){
 }
 $source=$taskRoot
 $runtime=if($ElectronRuntime){[System.IO.Path]::GetFullPath($ElectronRuntime)}else{Join-Path $taskRoot "node_modules/electron/dist"}
+$resourceEditor=if($Rcedit){[System.IO.Path]::GetFullPath($Rcedit)}else{Join-Path $taskRoot 'node_modules/rcedit/bin/rcedit-x64.exe'}
+if(-not(Test-Path -LiteralPath $resourceEditor -PathType Leaf)){throw 'Install dev dependencies (rcedit) or supply -Rcedit'}
 $compiler=Join-Path $env:WINDIR 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
 foreach($required in @('index.html','package.json','sketch-refinement.js','sketch-refinement-core.js','sketch-refinement-input.js','desktop/Launcher.cs','desktop/printer.cer','desktop/icon.ico','desktop/icon.png')){
  if(-not (Test-Path -LiteralPath (Join-Path $source $required) -PathType Leaf)){throw ('Missing release file: '+$required)}
@@ -32,9 +34,13 @@ if(Test-Path -LiteralPath $package){Remove-Item -LiteralPath $package -Recurse -
 New-Item -ItemType Directory -Force -Path $package | Out-Null
 Copy-Item -Path (Join-Path $runtime '*') -Destination $package -Recurse -Force
 $electron=Assert-BuildPath (Join-Path $package 'electron.exe')
-$renamedElectron=Assert-BuildPath (Join-Path $package 'A1PenStudio.App.exe')
+$renamedElectron=Assert-BuildPath (Join-Path $package 'BambuPen.exe')
 if(Test-Path -LiteralPath $renamedElectron){throw 'Unexpected existing application executable'}
-Rename-Item -LiteralPath $electron -NewName 'A1PenStudio.App.exe'
+Rename-Item -LiteralPath $electron -NewName 'BambuPen.exe'
+& $resourceEditor $renamedElectron --set-icon (Join-Path $source 'desktop/icon.ico') --set-version-string ProductName 'Bambu Pen' --set-version-string FileDescription 'Bambu Pen' --set-version-string InternalName 'BambuPen' --set-version-string OriginalFilename 'BambuPen.exe' --set-version-string CompanyName 'Bambu Pen Contributors' --set-file-version $version --set-product-version $version
+if($LASTEXITCODE -ne 0){throw 'Application resource branding failed'}
+$brandInfo=(Get-Item -LiteralPath $renamedElectron).VersionInfo
+if($brandInfo.ProductName -ne 'Bambu Pen' -or $brandInfo.FileDescription -ne 'Bambu Pen'){throw 'Packaged app branding verification failed'}
 $appFolder=Assert-BuildPath (Join-Path $package 'resources/app')
 New-Item -ItemType Directory -Force -Path $appFolder | Out-Null
 Get-ChildItem -LiteralPath $source -File | Where-Object { $_.Extension -in '.js','.css' -or $_.Name -in 'index.html','GUIDE.html','DESKTOP-GUIDE.html','README.md','package.json' } | Copy-Item -Destination $appFolder

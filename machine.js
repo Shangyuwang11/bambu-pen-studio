@@ -81,7 +81,7 @@
     if(!r.confirmed)throw Error('请先确认本组参考点、方向和 Z 高度是实测值');
     if(r.profile.xyReference==='local-test')throw Error('当前XY仍是Hello World局部试写基准，尚未标定笔尖与画板位置；Z校准不能代替XY对位');
     const p=r.profile,lines=[
-      '; Bambu Pen Studio 0.20.0 - DRAWING SEGMENT ONLY',
+      '; Bambu Pen - DRAWING SEGMENT ONLY',
       '; Not a standalone Bambu print job. No startup or homing included.',
       '; PRECONDITION: machine already homed, same coordinate frame as calibration.',
       `; PRECONDITION: nozzle already positioned at X${fmt(r.start.x)} Y${fmt(r.start.y)} Z${fmt(r.start.z)} before this segment.`,

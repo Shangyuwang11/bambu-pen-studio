@@ -1,5 +1,5 @@
 'use strict';
-const {app,BrowserWindow,ipcMain,dialog,Menu,screen,safeStorage,powerSaveBlocker,powerMonitor,clipboard,shell}=require('electron');
+const {app,BrowserWindow,ipcMain,dialog,Menu,screen,safeStorage,powerSaveBlocker,powerMonitor,clipboard,shell,nativeTheme}=require('electron');
 const {createUpdater,busyForUpdate,backupData,RELEASES}=require('./updates.cjs');
 const fs=require('node:fs'),path=require('node:path');
 const {createBridge}=require('../bridge/server.cjs'),C=require('../core.js'),M=require('../machine.js');
@@ -7,12 +7,12 @@ const {createAutoConnect}=require('./autoconnect.cjs');
 const {createConnectionControls}=require('./connection-controls.cjs');
 const {startConnectionLifecycle}=require('./connection-lifecycle.cjs');
 const {createPairStore}=require('./pair-store.cjs');
-app.setName('A1 Pen Studio');app.setAppUserModelId('local.a1pen.studio');
+app.setName('Bambu Pen');app.setAppUserModelId('local.a1pen.studio');
 const profileDirectory=require('./profile-directory.cjs').chooseProfileDirectory({home:app.getPath('home'),appData:app.getPath('appData'),testDirectory:process.env.A1_PEN_TEST_DATA});
 app.setPath('userData',profileDirectory.directory);
 const preview=!!process.env.A1_PEN_TEST_DATA&&process.env.A1_PEN_PREVIEW==='1';
 let uiPresented=false,win,bridge,autoConnect,connectionControls,connectionLifecycle,quitting=false,closing=false,powerId=null,powerTimer=null,connectError='',initialData=null;
-let uiLanguage='zh-CN',updater,updateTimer,updateStartTimer;
+let preferences;let uiLanguage='zh-CN',updater,updateTimer,updateStartTimer;
 function updateState(){const target=process.env.A1_PEN_LAUNCHER_PATH;return {...updater.snapshot(),dataDirectory:app.getPath('userData'),canInstall:process.platform==='win32'&&!!target&&path.isAbsolute(target)&&path.extname(target).toLowerCase()==='.exe'&&fs.existsSync(target)};}
 async function installUpdate(){
  if(closing||quitting||busyForUpdate(bridge.snapshot()))throw Error(nt('绘画或校准结束后才能更新。'));
@@ -35,7 +35,7 @@ async function installUpdate(){
   await bridge.close();connectionLifecycle.stop();releasePower();helper.unref();finishQuit();return updateState();
  }catch(e){helper?.kill();closing=false;autoConnect.resume();throw e;}
 }
-const uiLabels={'文件':'File','保存作品':'Save project','退出':'Quit','编辑':'Edit','撤销':'Undo','重做':'Redo','剪切':'Cut','复制':'Copy','粘贴':'Paste','显示':'View','恢复大小':'Actual size','放大':'Zoom in','缩小':'Zoom out','全屏':'Full screen','帮助':'Help','换笔与桌面版使用说明':'Getting started','拓竹写字机':'Bambu Pen Studio','外部资料链接':'External reference','复制链接':'Copy link','关闭':'Close','保存作品或导出文件':'Save project or export','当前仍在执行机器动作':'The printer is still moving','继续运行':'Keep running','停止后退出':'Stop and quit','正在上传或启动完整文件，请等启动确认后再关闭。':'Uploading or starting a file. Wait for startup confirmation before closing.','机器动作尚未结束，窗口保持打开，请查看状态。':'Motion has not finished. The window will remain open. Check printer status.','绘图会等待已发送指令确认完成，再抬笔返回待机位置；校准会在当前已发送动作结束后停住，请现场观察笔尖。':'Drawing waits for sent commands, then lifts the pen and returns to standby. Calibration stops after the current movement. Watch the pen at the printer.','未能完成关闭':'Could not close','拓竹写字机启动失败':'Could not start Bambu Pen Studio'};
+const uiLabels={'文件':'File','保存作品':'Save project','退出':'Quit','编辑':'Edit','撤销':'Undo','重做':'Redo','剪切':'Cut','复制':'Copy','粘贴':'Paste','显示':'View','恢复大小':'Actual size','放大':'Zoom in','缩小':'Zoom out','全屏':'Full screen','帮助':'Help','换笔与桌面版使用说明':'Getting started','拓竹写字机':'Bambu Pen','外部资料链接':'External reference','复制链接':'Copy link','关闭':'Close','保存作品或导出文件':'Save project or export','当前仍在执行机器动作':'The printer is still moving','继续运行':'Keep running','停止后退出':'Stop and quit','正在上传或启动完整文件，请等启动确认后再关闭。':'Uploading or starting a file. Wait for startup confirmation before closing.','机器动作尚未结束，窗口保持打开，请查看状态。':'Motion has not finished. The window will remain open. Check printer status.','绘图会等待已发送指令确认完成，再抬笔返回待机位置；校准会在当前已发送动作结束后停住，请现场观察笔尖。':'Drawing waits for sent commands, then lifts the pen and returns to standby. Calibration stops after the current movement. Watch the pen at the printer.','未能完成关闭':'Could not close','Bambu Pen 启动失败':'Could not start Bambu Pen'};
 const nt=s=>uiLanguage==='en'?(uiLabels[s]||s):s;
 Object.assign(uiLabels,{'绘画或校准结束后才能更新。':'Finish drawing or calibration before updating.','请从下载的 EXE 启动软件后再更新。':'Start the downloaded EXE to enable in-app installation.'});
 const connectionEvents=[],motionEvents=[];
@@ -46,7 +46,7 @@ const one=app.requestSingleInstanceLock();if(!one){app.quit();}else{
  app.on('second-instance',()=>{if(uiPresented&&win&&!win.isDestroyed()){if(win.isMinimized())win.restore();win.show();win.focus();}});
  app.on('before-quit',event=>{if(!quitting){event.preventDefault();closeApp();}});
  app.on('window-all-closed',()=>{if(!quitting)closeApp();});
- app.whenReady().then(start).catch(async e=>{autoConnect?.pause();connectionLifecycle?.stop();try{await bridge?.close();}catch{}releasePower();dialog.showErrorBox(nt('拓竹写字机启动失败'),e.message);finishQuit(1);});
+ app.whenReady().then(start).catch(async e=>{autoConnect?.pause();connectionLifecycle?.stop();try{await bridge?.close();}catch{}releasePower();dialog.showErrorBox(nt('Bambu Pen 启动失败'),e.message);finishQuit(1);});
 }
 function releasePower(){if(powerTimer){clearInterval(powerTimer);powerTimer=null;}if(powerId!==null){powerSaveBlocker.stop(powerId);powerId=null;}}
 function finishQuit(code=0){quitting=true;app.releaseSingleInstanceLock();const fallback=setTimeout(()=>app.exit(code),2000);fallback.unref();app.quit();}
@@ -62,7 +62,7 @@ function publicPair(){return pairStore.publicPair();}
 async function start(){
  fs.mkdirSync(app.getPath('userData'),{recursive:true});
  updater=createUpdater({version:app.getVersion(),directory:app.getPath('userData')});
- try{uiLanguage=JSON.parse(fs.readFileSync(path.join(app.getPath('userData'),'ui-preferences.json'),'utf8')).language;}catch{uiLanguage=preview||app.getLocale().startsWith('zh')?'zh-CN':'en';}if(!['zh-CN','en'].includes(uiLanguage))uiLanguage='en';
+ preferences=require('./ui-preferences.cjs').createPreferences(app.getPath('userData'),preview||app.getLocale().startsWith('zh')?'zh-CN':'en');uiLanguage=preferences.get().language;nativeTheme.themeSource=preferences.get().theme;
  try{const log=path.join(app.getPath('userData'),'connection-log.json');if(fs.statSync(log).size<65536){const old=JSON.parse(fs.readFileSync(log,'utf8'));if(Array.isArray(old))for(const item of old.slice(-60)){if(/^[a-z-]+$/.test(item.event)&&Number.isFinite(item.at))connectionEvents.push({event:item.event,at:item.at,...(Number.isInteger(item.attempts)?{attempts:item.attempts}:{})});}}}catch{}
  connectionEvent({event:'app-start',at:Date.now(),version:app.getVersion()});
  const importArg=process.argv.find(x=>x.startsWith('--import-session='));
@@ -72,8 +72,9 @@ async function start(){
  autoConnect=createAutoConnect({bridge,loadPair,onEvent:connectionEvent});
  connectionControls=createConnectionControls({bridge,autoConnect,load:()=>{try{return JSON.parse(fs.readFileSync(path.join(app.getPath('userData'),'connection-preferences.json'),'utf8'));}catch{return null;}},save:v=>atomic(path.join(app.getPath('userData'),'connection-preferences.json'),v)});
  try{await bridge.listen(Number(process.env.A1_PEN_PORT||8765));}catch(e){if(e.code==='EADDRINUSE')throw Error('本地连接端口已被占用。请先结束旧联网版的绘图并关闭它的连接服务，再打开桌面版。');throw e;}
- ipcMain.on('pen:bootstrap',event=>{try{trusted(event);event.returnValue={...initialData,language:uiLanguage};}catch{event.returnValue=null;}});
- ipcMain.handle('pen:language',(event,value)=>{trusted(event);if(!['zh-CN','en'].includes(value))throw Error('Invalid language');uiLanguage=value;atomic(path.join(app.getPath('userData'),'ui-preferences.json'),{language:value});installMenu();win.setTitle(nt('拓竹写字机'));return value;});
+ ipcMain.on('pen:bootstrap',event=>{try{trusted(event);event.returnValue={...initialData,language:uiLanguage,preferences:preferences.get(),dark:nativeTheme.shouldUseDarkColors,version:app.getVersion()};}catch{event.returnValue=null;}});
+ ipcMain.handle('pen:language',(event,value)=>{trusted(event);if(!['zh-CN','en'].includes(value))throw Error('Invalid language');uiLanguage=value;preferences.patch({language:value});installMenu();win.setTitle('Bambu Pen');return value;});
+ ipcMain.handle('pen:preferences',(event,value)=>{trusted(event);const next=preferences.patch(value);nativeTheme.themeSource=next.theme;applyWindowTheme();return next;});
  ipcMain.handle('pen:save',(event,value)=>{trusted(event);const data=validateWork(value);atomic(workFile(),data);initialData=data;return {saved:true};});
  ipcMain.handle('pen:update-status',event=>{trusted(event);return updateState();});
  ipcMain.handle('pen:update-check',async event=>{trusted(event);await updater.check();return updateState();});
@@ -93,16 +94,16 @@ async function start(){
  try{if(process.env.A1_PEN_ACCESS_CODE){const pair={ip:process.env.A1_PEN_IP,serial:process.env.A1_PEN_SERIAL,accessCode:process.env.A1_PEN_ACCESS_CODE};delete process.env.A1_PEN_ACCESS_CODE;savePair(pair);}}catch(e){connectError=e.message;}
  connectionLifecycle=startConnectionLifecycle({autoConnect,bridge,powerMonitor,onEvent:connectionEvent,canRun:()=>!closing&&!quitting});
  const size=screen.getPrimaryDisplay().workAreaSize;
- win=new BrowserWindow({title:nt('拓竹写字机'),width:Math.min(1420,size.width),height:Math.min(940,size.height),minWidth:900,minHeight:640,show:false,autoHideMenuBar:true,titleBarStyle:'hidden',titleBarOverlay:{color:'#f4f5f2',symbolColor:'#283b35',height:42},backgroundColor:'#f4f5f2',icon:path.join(__dirname,'icon.ico'),webPreferences:{backgroundThrottling:!(process.env.A1_PEN_TEST_DATA&&process.env.A1_PEN_TEST_HIDE==='1'),preload:path.join(__dirname,'preload.cjs'),sandbox:true,contextIsolation:true,nodeIntegration:false,webviewTag:false,webSecurity:true}});
+ win=new BrowserWindow({title:'Bambu Pen',width:Math.min(1420,size.width),height:Math.min(940,size.height),minWidth:900,minHeight:640,show:false,autoHideMenuBar:true,titleBarStyle:'hidden',titleBarOverlay:{color:'#f4f5f2',symbolColor:'#283b35',height:42},backgroundColor:'#f4f5f2',icon:path.join(__dirname,'icon.ico'),webPreferences:{backgroundThrottling:!(process.env.A1_PEN_TEST_DATA&&process.env.A1_PEN_TEST_HIDE==='1'),preload:path.join(__dirname,'preload.cjs'),sandbox:true,contextIsolation:true,nodeIntegration:false,webviewTag:false,webSecurity:true}});
  win.webContents.session.setPermissionRequestHandler((_w,_p,cb)=>cb(false));
  win.webContents.on('will-navigate',(e,url)=>{if(new URL(url).origin!==bridge.origin)e.preventDefault();});
  win.webContents.setWindowOpenHandler(({url})=>{if(new URL(url).origin===bridge.origin)return {action:'allow',overrideBrowserWindowOptions:{width:1000,height:800,autoHideMenuBar:true,webPreferences:{sandbox:true,contextIsolation:true,nodeIntegration:false}}};dialog.showMessageBox(win,{type:'info',message:nt('外部资料链接'),detail:url,buttons:[nt('复制链接'),nt('关闭')]}).then(r=>{if(r.response===0)clipboard.writeText(url);});return {action:'deny'};});
  win.webContents.on('did-create-window',child=>{child.webContents.on('will-navigate',(e,url)=>{if(new URL(url).origin!==bridge.origin)e.preventDefault();});child.webContents.setWindowOpenHandler(()=>({action:'deny'}));});
  win.webContents.session.on('will-download',(_event,item)=>{item.setSaveDialogOptions({title:nt('保存作品或导出文件'),defaultPath:path.join(app.getPath('downloads'),path.basename(item.getFilename()))});});
- installMenu();
+ installMenu();applyWindowTheme();nativeTheme.on('updated',applyWindowTheme);
  // A first paint can still contain the legacy markup. Presentation waits
  // for the final workspace layout, not Electron's ready-to-show event.
- win.webContents.on('did-finish-load',()=>{if(preview)win.setTitle('拓竹写字机 '+app.getVersion()+' · 独立预览');connectionEvent({event:'ui-loaded',at:Date.now()});});
+ win.webContents.on('did-finish-load',()=>{if(preview)win.setTitle('Bambu Pen '+app.getVersion()+' · Preview');connectionEvent({event:'ui-loaded',at:Date.now()});});
  win.webContents.on('did-fail-load',(_e,code,_description,_url,isMainFrame)=>{if(isMainFrame)connectionEvent({event:'ui-load-error',at:Date.now(),code});});
  win.on('close',event=>{if(quitting)return;event.preventDefault();closeApp();});
  await win.loadURL(bridge.origin);
@@ -129,4 +130,5 @@ async function closeApp(){if(closing||quitting)return;closing=true;autoConnect?.
  await bridge?.close();connectionLifecycle?.stop();releasePower();finishQuit();
  }catch(e){dialog.showErrorBox(nt('未能完成关闭'),e.message);}finally{closing=false;if(!quitting)autoConnect?.resume();}}
 
-function installMenu(){Menu.setApplicationMenu(Menu.buildFromTemplate([{label:nt('文件'),submenu:[{label:nt('保存作品'),accelerator:'CmdOrCtrl+S',click:()=>win.webContents.executeJavaScript("document.getElementById('saveProject').click()")},{type:'separator'},{role:'quit',label:nt('退出')}]},{label:nt('编辑'),submenu:[{role:'undo',label:nt('撤销')},{role:'redo',label:nt('重做')},{type:'separator'},{role:'cut',label:nt('剪切')},{role:'copy',label:nt('复制')},{role:'paste',label:nt('粘贴')}]},{label:nt('显示'),submenu:[{role:'resetZoom',label:nt('恢复大小')},{role:'zoomIn',label:nt('放大')},{role:'zoomOut',label:nt('缩小')},{role:'togglefullscreen',label:nt('全屏')}]},{label:nt('帮助'),submenu:[{label:nt('换笔与桌面版使用说明'),click:()=>win.webContents.executeJavaScript("window.open('DESKTOP-GUIDE.html','_blank')")}]}]));}
+function applyWindowTheme(){if(!win||win.isDestroyed())return;const dark=nativeTheme.shouldUseDarkColors;win.webContents.send('pen:theme',dark);win.setTitleBarOverlay({color:dark?'#171d20':'#f4f5f2',symbolColor:dark?'#e5eeea':'#283b35',height:42});win.setBackgroundColor(dark?'#171d20':'#f4f5f2');}
+function installMenu(){Menu.setApplicationMenu(Menu.buildFromTemplate([{label:nt('文件'),submenu:[{label:uiLanguage==='en'?'Settings':'设置',accelerator:'CmdOrCtrl+,',click:()=>win.webContents.executeJavaScript("window.PenSettings?.open()")},{type:'separator'},{label:nt('保存作品'),accelerator:'CmdOrCtrl+S',click:()=>win.webContents.executeJavaScript("document.getElementById('saveProject').click()")},{type:'separator'},{role:'quit',label:nt('退出')}]},{label:nt('编辑'),submenu:[{role:'undo',label:nt('撤销')},{role:'redo',label:nt('重做')},{type:'separator'},{role:'cut',label:nt('剪切')},{role:'copy',label:nt('复制')},{role:'paste',label:nt('粘贴')}]},{label:nt('显示'),submenu:[{role:'resetZoom',label:nt('恢复大小')},{role:'zoomIn',label:nt('放大')},{role:'zoomOut',label:nt('缩小')},{role:'togglefullscreen',label:nt('全屏')}]},{label:nt('帮助'),submenu:[{label:nt('换笔与桌面版使用说明'),click:()=>win.webContents.executeJavaScript("window.open('DESKTOP-GUIDE.html','_blank')")}]}]));}

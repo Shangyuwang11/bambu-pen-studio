@@ -1,4 +1,8 @@
-# 拓竹写字机 / Bambu Pen Studio
+# Bambu Pen
+
+Settings: use the lower-left Settings icon or Ctrl+, for Light / Dark / System themes, Chinese / English, updates, local files and version information. Existing user data stays in `%USERPROFILE%\.a1-pen-studio`.
+
+设置入口：左下角设置图标，或 Ctrl+,。支持浅色、深色、跟随系统、中英文、软件更新、数据文件夹和版本信息。改名后继续使用原数据目录。
 
 A local desktop workspace for pen drawing with Bambu Lab printers. Community project, not an official Bambu Lab product.
 
@@ -27,9 +31,9 @@ See [publishing and storage details / 发布步骤与数据说明](docs/UPDATES.
 
 ## Support / 支持范围
 
-Version 0.20.2 targets Windows 10/11 x64. Live connection and calibration support **A1 mini**. **A1 and P1S support layout/export only**, not live control. Preview is a simulation, not a live position sensor.
+Version 0.21.0 targets Windows 10/11 x64. Live connection and calibration support **A1 mini**. **A1 and P1S support layout/export only**, not live control. Preview is a simulation, not a live position sensor.
 
-0.20.2 面向 Windows 10/11 x64。A1 mini 支持连接与校准；A1、P1S 当前仅支持排版和导出。预览不是机器位置传感器。
+0.21.0 面向 Windows 10/11 x64。A1 mini 支持连接与校准；A1、P1S 当前仅支持排版和导出。预览不是机器位置传感器。
 
 ## Run from source / 从源码运行
 
