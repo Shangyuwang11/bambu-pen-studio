@@ -1,0 +1,17 @@
+{
+  "name": "a1-pen-studio",
+  "version": "0.20.0",
+  "description": "A desktop pen-plotting workspace for Bambu Lab A1 mini: text, images, calibration and local printer control.",
+  "main": "desktop/main.cjs",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "start:local": "node bridge/server.cjs",
+    "test": "node scripts/test.cjs",
+    "build:win": "pwsh -NoProfile -File scripts/build-windows.ps1"
+  },
+  "devDependencies": {
+    "electron": "44.4.5",
+    "playwright": "1.62.1"
+  }
+}

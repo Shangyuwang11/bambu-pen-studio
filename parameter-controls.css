@@ -1,0 +1,13 @@
+.parameter-field{display:block;min-width:0}.parameter-row{display:flex;align-items:center;gap:10px;margin-top:7px;min-width:0}
+#imageTraceDialog .parameter-row input,.parameter-row input{margin:0;min-width:0}
+.parameter-row input[type=range]{flex:1;width:0;padding:0;height:28px;accent-color:#24866c;background:transparent;border:0;cursor:pointer}
+.parameter-row input[type=number]{flex:0 0 76px;width:76px;padding:6px;border-radius:6px;font-variant-numeric:tabular-nums}
+#imageTraceDialog .natural-advanced-fields{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 22px}
+#imageTraceDialog .natural-main{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 22px}
+#imageTraceDialog .natural-detail-row{display:block}
+#imageTraceDialog .natural-detail-row label{display:block}
+#imageTraceDialog .natural-detail-row input[type=number]{width:76px}
+.stroke-sample{display:flex;align-items:center;gap:12px;color:#243d35;background:#fff;border:1px solid #dce6d4;border-radius:8px;padding:6px 10px;margin:9px 0;min-width:0}
+.stroke-sample svg{width:100%;min-width:0;height:32px}.stroke-sample span{font-size:11px;white-space:nowrap;color:#5d7169}
+.workspace-stroke-settings{padding:12px}.workspace-stroke-settings p{font-size:11px;line-height:1.6;color:#6d7e76;margin:8px 0 0}
+@media(max-width:650px){#imageTraceDialog .natural-main,#imageTraceDialog .natural-advanced-fields{grid-template-columns:1fr}.parameter-row input[type=number]{flex-basis:72px;width:72px}}

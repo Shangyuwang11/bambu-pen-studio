@@ -1,0 +1,66 @@
+/* Drawing, settings and sending share one layout at every window size. */
+.app-shell main{grid-template-columns:180px minmax(260px,1fr) 342px}
+.app-shell .right-panel{display:flex;flex-direction:column;overflow:hidden;scrollbar-gutter:auto;min-height:0}
+.workspace-settings{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+.workspace-fold{border:0;border-bottom:1px solid var(--line);margin:0;padding:0;background:#fcfdfb}
+.workspace-fold>summary{display:flex;gap:9px;align-items:center;padding:15px 17px;cursor:pointer;font-size:12px;color:var(--ink);list-style:none}
+.workspace-fold>summary:after{content:'›';margin-left:auto;font-size:18px;color:var(--muted);transform:rotate(0deg)}
+.workspace-fold[open]>summary:after{transform:rotate(90deg)}
+.workspace-fold>summary .ui-icon{width:17px;height:17px;color:var(--accent)}
+.workspace-fold>section{padding:0 17px 16px;border:0}
+#selectionFold>section>.section-title{display:none}
+#paperFold>section+.model-card{border-top:1px solid var(--line);padding-top:16px}
+#penLibraryFold .pen-library{padding:0 17px 18px;border:0}
+#penLibraryFold .pen-library>.section-title{display:none}
+.app-shell .workspace-speed{padding:0;border:0;border-bottom:1px solid var(--line)}
+.workspace-speed #speedSettings{border:0;margin:0;background:transparent;padding:0}
+.workspace-speed #speedSettings>summary{padding:15px 17px;font-size:12px;color:var(--ink)}
+.workspace-speed .speed-card{padding:0 17px 17px}
+.workspace-speed-context{margin:0;padding:0 17px 12px;color:var(--muted);font-size:11px;line-height:1.6}
+.workspace-live-speed{padding:0 17px 15px}
+.workspace-live-speed>strong{display:block;font-size:12px;margin-bottom:12px}
+.workspace-live-speed #liveSpeedNote{display:block!important;line-height:1.6;color:var(--muted);font-size:11px}
+.workspace-live-speed .speed-levels{margin:0 0 10px}
+.workspace-speed-readout{font-size:12px;font-weight:600;color:var(--accent);margin:8px 0}
+.app-shell .workspace-task{flex:0 0 auto;max-height:46%;overflow:auto;border-top:1px solid #cbd9cb;background:#f3f7f1;box-shadow:0 -5px 16px #19371d05}
+.app-shell .workspace-task>.task-card{padding:14px 17px;background:transparent;border:0}
+.workspace-task .task-card>.section-title{margin-bottom:9px}
+.workspace-task .task-progress{margin:9px 0;padding:8px 10px;background:#fff;border-radius:8px}
+.workspace-task .task-progress>strong{font-size:13px;line-height:1.5}
+.workspace-task #taskEyebrow{display:none}
+.workspace-task #taskDetail{margin:4px 0;font-size:11px;line-height:1.5}
+.workspace-task .machine-check{font-size:11px;margin:8px 0}
+.workspace-task .task-card>.icon-action-row{display:flex;gap:8px}
+.workspace-task #lanQuickStart{flex:1;min-width:0;width:auto;min-height:37px}
+.workspace-task #lanStop{width:auto;min-width:75px;min-height:37px;border:1px solid #d8bdb4;color:#9d483b;background:#fff9f7}
+.workspace-task .task-action-hint{font-size:11px;line-height:1.5;margin:5px 0}
+.workspace-mode-help{font-size:10px;line-height:1.6;color:var(--muted);margin:6px 0 8px}
+.app-shell .workspace-live-height{padding:10px 0 0;border:0;background:transparent}
+.workspace-live-height>.section-title{display:none}
+.workspace-live-height .height-nudge{display:inline-flex;gap:6px;margin:0 7px 0 0}
+.workspace-live-height .compact-height{display:inline-block;font-size:11px}
+.workspace-live-height #liveHeightNote{display:none}
+.workspace-extras>details{padding:10px 17px}
+.retired-control{display:none!important}
+.app-shell .workspace-config{gap:16px;padding:8px 13px;min-height:45px}
+.workspace-config output{font-size:11px;color:#385744;white-space:nowrap}
+.workspace-config .config-item{gap:6px}
+.app-shell .workspace-config{flex-wrap:wrap}
+.app-shell .mount-quick{display:inline-flex;align-items:center;gap:5px;border:1px solid #dbe5dc;border-radius:7px;background:#f5f9f4;color:#35634b;padding:5px 8px;font-size:11px;white-space:nowrap}
+.mount-quick svg{width:15px;height:15px}
+.mount-offset-readout{margin-left:auto;font-size:11px;color:#657b6e;white-space:nowrap}
+#mountPositionFold>.mount-card>.section-title{display:none}
+.workspace-config .config-item label{display:none}
+.app-shell .config-item select{max-width:155px}
+.app-shell .labelled-action{width:auto;min-width:0;display:inline-flex;gap:7px;align-items:center;justify-content:center}
+.app-shell .labelled-action .button-caption{display:inline;font-size:11px;line-height:1.5;white-space:normal}
+.app-shell #retrace,.app-shell #editImageConversion{width:100%;height:auto;min-height:35px;border:1px solid var(--line);padding:7px}
+.playback-label{font-size:10px;color:var(--muted)}
+.app-shell .add-grid{display:grid;grid-template-columns:repeat(2,1fr)}
+.app-shell .layers-section>.row{flex-wrap:wrap}
+@media(min-width:1700px){.app-shell main{grid-template-columns:205px minmax(300px,1fr) 362px}}
+@media(max-width:1180px) and (min-width:761px){.app-shell main{grid-template-columns:144px minmax(235px,1fr) 310px}.app-shell .left-panel section{padding:15px 10px}.workspace-config output{font-size:10px}.app-shell .config-item select{max-width:110px}.app-shell .workspace-config{gap:8px}.app-shell .workspace-config .config-item>span{display:none}.workspace-config .config-item>button{min-width:24px;width:24px}.app-shell .preview-top{flex-wrap:wrap}.app-shell .efficiency-preview{margin-left:auto}}
+@media(max-width:900px) and (min-width:761px){.app-shell main{grid-template-columns:120px minmax(210px,1fr) 292px}.app-shell .workspace-config{flex-wrap:wrap}.app-shell .toolbar{height:auto;min-height:50px;flex-wrap:wrap}.app-shell .preview-panel .metrics{flex-wrap:wrap}}
+@media(max-width:760px){.app-shell main{display:flex;flex-direction:column;overflow:auto}.app-shell .right-panel{display:flex;overflow:visible;flex:0 0 auto}.workspace-settings{overflow:visible;flex:0 0 auto;scrollbar-gutter:auto}.app-shell .workspace-task{max-height:none;overflow:visible;order:-1}.app-shell .workspace{min-height:540px}.app-shell .add-grid{grid-template-columns:repeat(4,1fr)}}
+
+.nib-sizes{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:14px}.nib-sizes button{font-size:11px!important;padding:7px 3px!important}.nib-sizes button[aria-pressed=true]{background:#e7f2dd;border-color:#8db772;color:#3d6b34}#penLibraryFold #strokeSettings{margin:15px 0;border-top:1px solid #e1e8d9}#nibSaveStatus{font-size:11px;line-height:1.6;color:#627d50}

@@ -1,0 +1,12 @@
+html[data-ui-boot]:not([data-ui-boot="ready"]) body > :not(#appStartup),
+html[data-ui-boot]:not([data-ui-boot="ready"]) body > :not(#appStartup) * {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+#appStartup {position:fixed;inset:0;z-index:2147483647;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#f4f5f2;color:#283b35;font:14px 'Microsoft YaHei UI',sans-serif;text-align:center;padding:28px;box-sizing:border-box}
+#appStartup .startup-mark {display:grid;place-items:center;width:54px;height:54px;border-radius:16px;background:#17684e;color:white;font-size:30px}
+#appStartup h1 {margin:0;font-size:20px;font-weight:600}
+#appStartup p {margin:0;max-width:420px;line-height:1.7;color:#607369}
+#appStartup button {padding:9px 22px;border:0;border-radius:7px;background:#17684e;color:white;cursor:pointer;font:inherit}
+#appStartup button[hidden] {display:none}
+html[data-ui-boot="ready"] #appStartup {display:none}

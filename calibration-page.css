@@ -1,0 +1,102 @@
+.app-shell #calibrationDialog{position:static;inset:auto;grid-area:2/2/3/3;width:100%;max-width:none;height:100%;max-height:none;margin:0;padding:34px clamp(24px,4.5vw,70px);border:0;border-radius:0;box-shadow:none;background:#f7f9f4;overflow:auto;line-height:1.65;min-width:0;scrollbar-width:thin}
+#calibrationPage{max-width:1280px;margin:auto;min-width:0}
+.cal-page-heading{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:30px}
+.cal-page-heading h1{font-size:25px;font-weight:500;color:#3c543f;margin:5px 0 5px;letter-spacing:.03em;outline:none}
+.cal-page-heading p{margin:0;font-size:12px;color:#82917a}
+.cal-page-actions{display:flex;align-items:center;gap:15px;flex-shrink:0}
+.cal-page-actions button{background:transparent;border:0;color:#84937c;font-size:12px;padding:8px 4px}
+.cal-state-pill{font-size:11px;color:#8c997d;background:#edf1e6;border:1px solid #e5eadc;padding:6px 12px;border-radius:20px;white-space:nowrap}
+.cal-state-pill[data-complete=true]{color:#517a42;background:#e7f0df;border-color:#dce9d0}
+.cal-state-pill[data-busy=true]{color:#9b8348;background:#f6f0df;border-color:#ebe0c0}
+.cal-page-layout{display:grid;grid-template-columns:170px minmax(0,1fr) 215px;align-items:start;gap:24px;min-width:0}
+.cal-step-sidebar{background:transparent;overflow:visible;padding:3px 0;border:0}
+.app-shell .cal-steps{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}
+.app-shell .cal-steps li{position:relative;display:flex;align-items:flex-start;flex-direction:column;text-align:left;background:transparent;padding:13px 8px 13px 45px;border-radius:9px;color:#91a085;font-size:12px;line-height:1.45;min-height:67px}
+.app-shell .cal-steps li:before{content:attr(data-cal-step);display:grid;place-items:center;position:absolute;left:8px;top:14px;width:25px;height:25px;border-radius:50%;background:#e9eee1;color:#8d9c7e;font-size:11px;z-index:1}
+.app-shell .cal-steps li strong{font-size:12px;font-weight:500;color:inherit}
+.app-shell .cal-steps li span{font-size:10px;margin-top:5px;color:#a0ab92}
+.app-shell .cal-steps li.current{background:#eaf1e1;color:#55764a}
+.app-shell .cal-steps li.current:before{background:#72945d;color:#fff}
+.app-shell .cal-steps li.done{color:#7a9270;background:transparent}
+.app-shell .cal-steps li.done:before{content:'✓';background:#e4edd9;color:#759263}
+.cal-sidebar-note{font-size:11px;line-height:1.8;color:#97a38c;border-top:1px solid #e4e9dc;margin:18px 9px 0;padding-top:17px}
+.cal-primary-panel{padding:26px 28px 23px;background:#fff;border:1px solid #e3e9dc;border-radius:16px;box-shadow:0 8px 28px #465d2410;min-width:0}
+.cal-panel-topline{display:flex;justify-content:space-between;align-items:center;gap:10px;padding-bottom:18px;border-bottom:1px solid #edf0e7;font-size:10px;color:#9aa68d}
+.cal-connection{gap:7px;margin:0;justify-content:flex-end;font-size:10px;color:#91a184;flex-wrap:wrap;text-align:right}
+#calConnection[data-connected=true]{color:#679253}
+#calConnection:before{content:'';display:inline-block;width:5px;height:5px;border-radius:50%;background:currentColor;margin:0 5px 1px 0}
+#calConnect{font-size:10px;padding:4px 6px;background:#f3f6ed;border-color:#e7eddf;white-space:nowrap}
+.app-shell .cal-card{padding:20px 0 6px;border:0;min-width:0}
+.app-shell .cal-card h2{font-size:21px;letter-spacing:.01em;color:#45603f;font-weight:500;margin:0 0 11px;line-height:1.4}
+.app-shell .cal-card p{margin:0 0 18px;font-size:12px;color:#8a987f;line-height:1.8}
+.app-shell .cal-card h3{font-size:14px;margin:0 0 8px;color:#647e57;font-weight:500}
+.app-shell .cal-confirm{display:flex;align-items:flex-start;gap:9px;background:#f4f7ee;border:1px solid #e8eddf;border-radius:8px;padding:12px 14px!important;color:#788c68!important;font-size:12px!important;margin:17px 0}
+.cal-confirm input{flex-shrink:0;margin:3px 0 0!important}
+.cal-card>.primary{min-height:42px;font-size:12px;border-radius:8px}
+.cal-step-illustration{height:112px;position:relative;margin:7px 0 17px;background:radial-gradient(ellipse at center,#f5f8ef,#fcfdf9);border-radius:12px;overflow:hidden}
+.cal-art-paper{position:absolute;width:100px;height:57px;left:calc(50% - 76px);top:29px;background:#fff;border:1px solid #dfe8d4;border-radius:3px;transform:skewY(-9deg);box-shadow:0 5px 0 #e7eedf}
+.cal-art-paper:after{content:'';display:block;width:63px;margin:20px 17px;border-top:1px solid #c3d4b1;box-shadow:0 9px 0 #cbdab9}
+.cal-art-pen{position:absolute;width:13px;height:60px;left:calc(50% + 26px);top:16px;background:#8ca775;border:1px solid #7c9565;border-radius:5px 5px 0 0;transform:rotate(-13deg)}
+.cal-art-pen:after{content:'';position:absolute;top:59px;left:2px;width:7px;height:12px;background:#48653b;clip-path:polygon(0 0,100% 0,50% 100%)}
+.cal-art-arrow{position:absolute;left:calc(50% + 62px);top:22px;font-size:31px;font-weight:300;color:#aec497}
+.cal-help{margin:17px 0 0;padding-top:12px;border-top:1px solid #edf0e7;font-size:11px;color:#91a17f}
+.cal-help summary{font-size:11px;font-weight:400;color:#8a9d78}
+.app-shell .cal-help p{font-size:11px;line-height:1.8;margin:12px 0 3px;color:#94a486}
+.cal-help .machine-check{margin-top:13px}
+.cal-working-art{height:132px;display:flex;align-items:center;justify-content:center;gap:29px;margin:10px 0;color:#c0d3ad}
+.cal-working-art span{width:9px;height:71px;background:#dce8d1;border-radius:4px}
+.cal-working-art i{width:106px;height:6px;background:#b5cba0;border-radius:4px;position:relative}
+.cal-working-art i:after{content:'';display:block;position:absolute;width:23px;height:34px;left:45px;top:2px;border-radius:5px;background:#8da974;box-shadow:0 8px 0 -5px #547548}
+.cal-secondary-action{background:#f0f5e8;color:#839973;border-color:#e3ecd7;font-size:11px}
+.cal-jog-group{background:#f6f9f0;border:1px solid #e8edde;border-radius:11px;padding:13px 14px;margin:18px 0}
+.cal-jog-group>span{font-size:10px;color:#95a484}
+.app-shell .cal-jogs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:7px 0 14px}
+.app-shell .cal-jogs:last-child{margin-bottom:0}
+.app-shell .cal-jogs button{padding:10px 3px;font-size:11px;min-width:0;background:#fff;border-color:#e1e9d8;color:#7a9564;white-space:nowrap}
+.cal-custom{gap:7px;margin:18px 0 0}
+.app-shell .cal-custom label{font-size:11px;min-width:0;margin:0}
+.cal-custom button{min-width:68px;padding:9px 7px;font-size:11px;white-space:nowrap;color:#6f895c}
+.app-shell .cal-card #calTarget{font-size:10px;margin:8px 0 0;line-height:1.5;color:#9ba78e}
+.cal-card .field-grid{margin-top:22px}
+.cal-card .field-grid label{font-size:11px}
+.app-shell .cal-offset{padding:16px;border:1px solid #e3eada;border-radius:10px;background:#f7f9f3;margin:16px 0}
+.app-shell .cal-offset p{font-size:11px;margin:0 0 9px;color:#8fa37b}
+.cal-offset-buttons{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:13px 0 12px}
+.cal-offset-buttons button{font-size:11px;padding:9px 3px;white-space:nowrap;border-color:#e0e8d5;color:#81996f}
+.cal-offset-custom{display:flex;align-items:flex-end;gap:6px;flex-wrap:wrap}
+.app-shell .cal-offset-custom label{flex:1 1 91px;margin:0;font-size:10px}
+.cal-offset-custom button{font-size:10px;padding:9px 8px;min-height:36px}
+.cal-refine-details{margin-bottom:21px}
+.cal-complete-actions{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:23px}
+.cal-complete-actions button{min-height:42px;font-size:12px;border-radius:8px}
+.cal-feedback{margin-top:21px;padding-top:15px;border-top:1px solid #e8edde}
+.cal-feedback #calMotion{font-size:11px;color:#789567;line-height:1.7;margin:0}
+.cal-feedback progress{margin-top:7px;height:4px;accent-color:#83a566}
+.cal-feedback #calNote{font-size:10px;color:#9aaa8c;line-height:1.7;margin:8px 0 0}
+.cal-feedback #calStop{width:100%;font-size:11px;margin-top:10px;background:#fff8f1;border-color:#ecd5c4;color:#ad8062}
+.cal-summary-panel{overflow:visible;background:transparent;padding:0;min-width:0}
+.cal-summary-card{background:#eff4e8;border:1px solid #e3ebd9;padding:21px 18px;border-radius:13px}
+.cal-summary-card h2{font-size:12px;color:#7d946b;font-weight:500;margin:0 0 17px}
+.cal-summary-card dl{margin:0}
+.cal-summary-card dl>div{margin:0 0 17px}
+.cal-summary-card dt{font-size:10px;color:#9baa8c;margin-bottom:5px}
+.cal-summary-card dd{font-size:14px;color:#637f51;font-weight:500;margin:0;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.cal-summary-card #calPaperHeight{font-size:10px;color:#97aa83;margin-top:4px;line-height:1.6}
+.cal-coordinates{border-top:1px solid #e0e8d5;padding-top:13px;margin-top:17px}
+.cal-coordinates summary{font-size:10px;color:#91a57b;font-weight:400}
+.app-shell .cal-position{padding:0;background:transparent;border:0;border-radius:0;font-size:10px;line-height:1.8;margin:9px 0 0;color:#95a585;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.cal-extras{font-size:10px;margin:20px 2px 0;padding:15px 0 0;border-color:#e2e8d9}
+.cal-extras summary{font-size:10px;color:#95a587}
+.cal-extras .machine-actions{display:flex;flex-direction:column;gap:8px}
+.cal-extras .machine-actions button{font-size:10px;padding:8px;background:#f1f5eb;border-color:#e3e9da;color:#879c75;text-align:center;width:100%;min-width:0;white-space:normal}
+.cal-extras .hint{font-size:10px;line-height:1.7;color:#9aaa8d}
+.cal-save-reminder{font-size:10px;color:#a0ad93;line-height:1.9;margin:24px 4px 0}
+#calFailure{font-size:12px;border:1px solid #efd9ca;border-radius:9px;background:#fff5ed;margin:17px 0 0;padding:12px;color:#ad775a;line-height:1.7;overflow-wrap:anywhere}
+.app-rail .rail-calibration.icon-button{height:54px;min-height:54px;flex-direction:column;gap:5px;padding:8px 4px 7px}
+.rail-calibration .rail-label{font-size:9px;font-weight:500;line-height:1}
+@media(max-width:1180px){.app-shell #calibrationDialog{padding:29px 29px}.cal-page-layout{grid-template-columns:145px minmax(0,1fr) 178px;gap:18px}.cal-primary-panel{padding:22px}.app-shell .cal-steps li{padding-left:40px}.app-shell .cal-steps li:before{left:5px}.cal-summary-card{padding:18px 15px}}
+@media(max-width:1030px){.cal-page-layout{grid-template-columns:150px minmax(0,1fr);gap:18px}.cal-summary-panel{grid-column:2;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}.cal-extras{margin:0;padding:17px 0 0}.cal-summary-card dl{display:flex;gap:20px;flex-wrap:wrap}.cal-summary-card dl>div{margin-bottom:8px}.cal-summary-card h2{margin-bottom:14px}.cal-save-reminder{grid-column:1/-1;margin:0 2px}}
+@media(max-width:760px){.app-shell #calibrationDialog{padding:25px 17px}.cal-page-heading{align-items:flex-start;gap:13px;margin-bottom:21px}.cal-page-heading h1{font-size:22px}.cal-page-heading p{font-size:11px;max-width:200px}.cal-page-actions{flex-direction:column;align-items:flex-end;gap:7px}.cal-page-actions button{font-size:10px;padding:5px 0}.cal-state-pill{font-size:9px;padding:5px 8px}.cal-page-layout{grid-template-columns:minmax(0,1fr);gap:18px}.cal-step-sidebar{padding:0}.app-shell .cal-steps{flex-direction:row;gap:3px}.app-shell .cal-steps li{flex:1;display:flex;align-items:center;justify-content:center;padding:33px 2px 7px;min-height:62px;text-align:center;border-radius:7px}.app-shell .cal-steps li:before{left:calc(50% - 11px);top:7px;width:22px;height:22px;font-size:10px}.app-shell .cal-steps li strong{font-size:9px;white-space:nowrap}.app-shell .cal-steps li span,.cal-sidebar-note{display:none}.cal-primary-panel{padding:20px 17px;border-radius:12px}.app-shell .cal-card h2{font-size:18px}.app-shell .cal-card p{font-size:11px}.cal-summary-panel{grid-column:1;gap:14px}.cal-summary-card{padding:16px 14px}.cal-summary-card dl{gap:12px}.cal-extras{padding-top:13px}.cal-custom{flex-wrap:wrap}.cal-custom label{flex-basis:100%;margin-bottom:5px!important}.cal-custom button{flex:1}.app-shell .cal-jogs{gap:5px}.app-shell .cal-jogs button{font-size:10px}.cal-jog-group{padding:11px 9px}.cal-panel-topline{gap:6px;font-size:9px}.cal-connection{font-size:9px}.cal-offset-custom button{padding:8px 7px}.cal-offset-buttons{gap:5px}.cal-complete-actions{gap:8px}.cal-complete-actions button{font-size:11px}.cal-step-illustration{height:99px}.cal-save-reminder{font-size:9px}}
+@media(prefers-reduced-motion:reduce){.calibration-page *{scroll-behavior:auto}}
+
+.cal-extras h2{font-size:13px;color:#496546;margin:0 0 10px}.cal-extras #calAgain{font-size:12px;color:#315b43;border-color:#b8cbb2}

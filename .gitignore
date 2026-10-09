@@ -1,0 +1,21 @@
+node_modules/
+build/
+dist/
+test-output/
+*-qa/
+*-qa-*/
+*-results.json
+AUDIT-results.json
+*.log
+.env
+.env.*
+!.env.example
+*.dpapi
+printer.enc.json
+workspace.json
+connection-log.json
+motion-log.json
+position-receipt.json
+file-job.json
+Local State
+.DS_Store

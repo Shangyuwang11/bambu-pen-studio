@@ -1,0 +1,129 @@
+/* One visual system for the desktop workspace and its narrow-window fallback. */
+:root{--ink:#263d35;--muted:#64766e;--panel:#fff;--accent:#267455;--line:#dfe5df;--border:#dfe5df;--surface:#f7f9f6;--focus:#25825c;--warning:#926523;--error:#a14334}
+body.app-shell{grid-template-columns:72px minmax(0,1fr);grid-template-rows:46px minmax(0,1fr) 29px;background:var(--surface)}
+.shell-title{height:46px;min-height:46px;max-height:46px;background:#fcfdfb;border-color:var(--line);padding:0 16px}
+.shell-title .brand strong{font-size:13px;letter-spacing:.05em;color:var(--ink)}
+.shell-title .brand strong span{font-size:11px;color:var(--muted)}
+.shell-title .brand-mark{width:27px;height:27px;background:var(--accent)}
+.preview-badge{font-size:10px;line-height:1.5;color:#78905c;background:#eef4e5;border:1px solid #d9e6ca;border-radius:5px;padding:2px 6px;white-space:nowrap;letter-spacing:0}
+.shell-title .header-actions button{width:32px;height:32px}
+.device-badge{color:#466e5a;font-size:11px;border:1px solid #e1e9e1;border-radius:7px;padding:5px 8px;margin-right:8px}
+.app-rail{background:#f2f5ef;padding:15px 7px 10px;border-color:var(--line)}
+.rail-pages{gap:8px;width:100%;align-items:center}
+.app-rail .rail-page.icon-button{width:56px;height:59px;min-height:59px;flex-direction:column;gap:6px;padding:8px 4px;color:#65776d;border-radius:10px}
+.app-rail .rail-page.current{background:#dfeddf;color:#225f42;box-shadow:inset 0 0 0 1px #cddfcb}
+.app-rail .rail-label{font-size:10px;line-height:1;font-weight:500;white-space:nowrap}
+.app-rail .rail-page .ui-icon{width:21px;height:21px}
+.app-rail .rail-bottom{gap:8px}
+.app-shell main{grid-template-columns:224px minmax(250px,1fr) 260px}
+.app-shell[data-page=setup] main,.app-shell[data-page=task] main{grid-template-columns:300px minmax(250px,1fr)}
+.app-shell .left-panel,.app-shell .right-panel{background:#fcfdfb;overscroll-behavior:contain;scrollbar-gutter:stable}
+.mode-panel>section,.mode-panel>details,.right-panel>section{padding:19px 16px}
+.app-shell .section-title{margin-bottom:14px}
+.app-shell .section-title h2{font-size:13px;letter-spacing:.015em;color:#344e41;font-weight:600}
+.app-shell label{font-size:12px;color:#5b6e61}
+.app-shell .tag,.app-shell .advanced>summary{color:#6b7b6c;font-size:11px}
+.app-shell input:not([type=checkbox]):not([type=range]),.app-shell select,.app-shell textarea{border-color:#d9e2d7;color:#304d3e;background:#fff;border-radius:7px;min-width:0}
+.app-shell input:not([type=checkbox]):not([type=range]),.app-shell select{min-height:35px}
+.app-shell input:focus-visible,.app-shell select:focus-visible,.app-shell textarea:focus-visible,.app-shell button:focus-visible,.app-shell summary:focus-visible,.device-badge:focus-visible{outline:2px solid var(--focus);outline-offset:3px}
+.app-shell button:disabled{opacity:.47;cursor:not-allowed}
+.app-shell .icon-button{color:#617867}
+.app-shell .icon-button:disabled{opacity:.47}
+.app-shell .icon-button:hover{background:#e8f0e6;color:#285c3e}
+.app-shell .icon-button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.app-shell .icon-button.primary:hover{background:#1d6043}
+.app-shell .section-help{color:#7c8e77}
+.app-shell .add-grid button{height:42px;width:42px;background:#edf3e8;border-color:#dbe7d3;color:#507842}
+.app-shell .layers-section .layer{padding:11px 9px;background:transparent;border-color:transparent}
+.app-shell .layer.active{background:#e8f1df;border-color:#d5e3cb}
+.app-shell .layer .label{font-size:12px;color:#47623f}
+.app-shell .layer .symbol{display:grid;place-items:center;width:23px;min-width:23px}
+.app-shell .layer .symbol .ui-icon{width:17px;height:17px}
+.app-shell .board-label{font-size:11px;color:#6a7d5d;border:1px solid #e2e9d9;background:#f1f5eb}
+.app-shell .board-label b{color:#4e6c40;font-weight:600}
+.workspace-config{min-height:52px;background:#fdfefb;border-color:#dfe7d8;padding:10px 16px;gap:24px}
+.app-shell .config-item label{font-size:11px;color:#637a56}
+.app-shell .config-item select{height:31px;min-height:31px;background:#f2f6ed;border-color:#e0e8d8;color:#446637}
+.config-item>.ui-icon,.config-item>span>.ui-icon{color:#769564}
+.app-shell .toolbar{background:#f3f7ee;border-color:#dbe5d2;padding:8px 14px;height:53px;min-height:53px}
+.app-shell .segmented{background:#e5ecde;padding:3px}
+.app-shell .segmented button.active{color:#326438;box-shadow:0 1px 3px #23451012}
+.app-shell .workspace{background:#e9efdf;min-height:0}
+.app-shell #stage{background:radial-gradient(ellipse at 50% 45%,#f5f7f0 0%,#e8eedf 75%);min-height:210px}
+.app-shell .preview-panel{background:#f9fcf4;padding:12px 16px 13px;border-color:#d9e5ce}
+.app-shell .preview-top strong{font-size:12px;font-weight:600;color:#516e42}
+.app-shell .preview-top span{font-size:11px;color:#75876a}
+.app-shell #strokeStep{font-size:11px;color:#6e825e}
+.app-shell .preview-panel .metrics{font-size:10px;color:#6f825f;gap:15px;margin-top:9px}
+.app-shell .metrics b{font-size:11px;color:#3f6531;font-weight:600}
+.app-shell #status{font-size:11px;color:#6f805f;background:#f0f5e7;white-space:normal;max-height:58px;overflow:auto}
+.app-status{height:29px;background:#f6f8f2;font-size:11px;color:#708067;border-color:#dde5d5;padding:0 16px}
+.app-status #saveStatus{color:#7e8c73;font-size:10px}
+.app-shell .pen-library{background:#f7faf2}
+.pen-choice strong{color:#456334;font-size:13px}
+.pen-choice small{font-size:11px;color:#70865e}
+.app-shell .pen-choice[aria-pressed=true]{background:#e9f2dd;border-color:#9abb7d;box-shadow:inset 3px 0 #719854}
+.pen-cards{max-height:none;overflow:visible}
+.pen-parameter-summary{background:#f0f6e7;border-color:#dce8ce;padding:13px;font-size:12px}
+.pen-parameter-summary dt{color:#6a8056}
+.pen-parameter-summary dd{color:#446632;font-size:11px}
+.current-pen{color:#456333;font-size:13px;font-weight:500}
+.pen-mount-reminder,.pen-library-note{color:#768a64;font-size:11px}
+.pen-config-fold>summary,.pen-drawing-settings summary,.machine-manual-reference>summary,.machine-manual-height>summary{color:#5d7a48;font-size:12px}
+.model-details{margin-top:15px;color:#789060}.model-details>summary{font-size:11px;font-weight:400}.model-details[open]>summary{margin-bottom:15px}.model-support{color:#738a61;font-size:11px}
+.app-shell .task-progress{padding:9px 0 14px}
+.app-shell .task-progress strong{font-size:19px;font-weight:600;line-height:1.55;margin-bottom:13px;color:#36582b;overflow-wrap:anywhere}
+.app-shell .task-progress progress{height:5px}
+.app-shell #taskDetail{font-size:12px;color:#647e52;line-height:1.8}
+.app-shell .task-card .machine-check{font-size:12px!important;line-height:1.75;color:#627e4f}
+.app-shell .task-card .icon-action-row{gap:8px;margin-top:10px}
+.app-shell .task-card #lanQuickStart{height:45px;min-height:45px;gap:10px;border-radius:8px}
+.button-caption{font-size:13px;font-weight:600;line-height:1.2;white-space:nowrap}
+.task-action-hint{font-size:11px;line-height:1.75;color:#7d8b6e;margin:10px 1px 0;overflow-wrap:anywhere}
+.mode-caption,.compact-height{font-size:11px;color:#738b5c}
+.motion-recovery{background:#f0f6e7;border-color:#d7e4c8}
+.motion-recovery>p{color:#6c825a;font-size:12px}
+.app-shell .speed-levels .icon-button.active{background:#e5efd6;border-color:#86a966;color:#426b2e}
+.app-shell .height-nudge{margin-top:14px}
+.devices-view{padding:35px clamp(24px,6vw,90px);background:#f7faf2}
+.devices-heading h1,.cal-page-heading h1{color:#36572e;font-size:24px;font-weight:600}
+.eyebrow{font-size:10px;color:#829b70;letter-spacing:.16em}
+.device-empty p,.device-caption,.device-address,.connect-steps small,.device-supported{color:#748a63}
+.device-card{border-color:#dce8cf;margin:45px auto 25px;box-shadow:0 9px 32px #45672808;border-radius:14px;max-width:850px}
+.device-card-content{padding:30px 32px 26px}
+.device-card-heading h2{color:#426635;font-size:25px;font-weight:600}
+.device-visual{background:radial-gradient(ellipse,#f9fbf4,#ebf3df)}
+.device-card-footer>span{font-size:11px;color:#78915f}
+.device-state-pill{font-size:11px;color:#7a8e62}
+.device-health{margin:22px 0 0;padding:14px 0 0;border-top:1px solid #e6eddc;font-size:12px;color:#5c7d44}
+.device-health>div{display:flex;align-items:flex-start;gap:16px;line-height:1.9;margin:3px 0 5px}
+.device-health dt{min-width:65px;color:#7e9667;display:flex;align-items:center;gap:7px;white-space:nowrap}
+.device-health dt .ui-icon{width:15px;height:15px}
+.device-health dd{margin:0;display:flex;align-items:center;gap:6px;flex:1}
+#deviceIssue{color:#a07135;font-size:11px;line-height:1.85}
+.device-health #storageRecheck{width:25px;height:25px;min-width:25px;min-height:25px;padding:5px;color:#7c9663;margin-left:auto}
+.device-separator{margin:19px 0}
+.device-form{border-color:#d9e7cd;box-shadow:0 8px 28px #45672808;border-radius:14px}
+.device-form-heading h2{color:#466a38;font-weight:600}
+.app-error{top:54px;left:89px;font-size:12px;border-color:#e7cbbc;background:#fff7f0;color:#9c6441;box-shadow:0 5px 20px #5f3a1b12}
+.app-tooltip{background:#2c4726f5;border-color:#ffffff16;font-size:12px;line-height:1.75;max-width:min(340px,calc(100vw - 16px));border-radius:7px}
+.app-shell dialog:not(.calibration-page){max-width:calc(100vw - 30px);max-height:calc(100vh - 60px);overflow:auto;padding:24px;border-color:#d9e6cd;background:#fcfef8}
+.app-shell dialog::backdrop{background:#19361430;backdrop-filter:blur(2px)}
+.app-shell #calibrationDialog{background:#f6f9f0;padding:30px clamp(24px,4vw,62px)}
+.cal-page-heading p,.cal-sidebar-note,.cal-help summary,.cal-help p,.cal-save-reminder{color:#7c9367}
+.app-shell .cal-steps li{color:#83966f}
+.app-shell .cal-steps li.current{color:#52743b;background:#e7f1da}
+.app-shell .cal-steps li span{color:#8b9d77;font-size:11px}
+.cal-primary-panel{border-color:#dce8ce;border-radius:13px;box-shadow:0 8px 26px #4064200b}
+.app-shell .cal-card h2{color:#416830;font-size:22px;font-weight:600}
+.app-shell .cal-card p{color:#70895a;font-size:12px}
+.cal-summary-card dt,.cal-coordinates summary,.cal-summary-card #calPaperHeight,.app-shell .cal-position{color:#7a9364;font-size:11px}
+.cal-summary-card h2{color:#5c7f45;font-weight:600}
+.cal-feedback #calNote{font-size:11px;color:#7d9665}
+.cal-feedback #calMotion{color:#5c7e43;font-size:12px}
+@media(min-width:1700px){.app-shell main{grid-template-columns:240px minmax(250px,1fr) 280px}.app-shell[data-page=setup] main,.app-shell[data-page=task] main{grid-template-columns:320px minmax(250px,1fr)}.mode-panel>section,.mode-panel>details,.right-panel>section{padding:22px 20px}}
+@media(max-width:1180px){.app-shell main{grid-template-columns:198px minmax(250px,1fr) 224px}.app-shell[data-page=setup] main,.app-shell[data-page=task] main{grid-template-columns:280px minmax(250px,1fr)}.mode-panel>section,.mode-panel>details,.right-panel>section{padding:17px 13px}.app-shell .add-grid button{width:36px;height:40px}.workspace-config{gap:10px;padding:9px 10px}.app-shell .toolbar{padding:8px 10px}.device-card-content{padding:26px 24px}}
+@media(max-width:950px) and (min-width:761px){.app-shell main{grid-template-columns:188px minmax(250px,1fr) 210px}.app-shell .right-panel{display:block;grid-column:auto}.app-shell .left-panel{max-height:none}.app-shell .workspace{height:100%;min-height:0}.app-shell .toolbar{flex-wrap:nowrap}.app-shell .preview-top{flex-wrap:nowrap}.app-shell .preview-top .row{gap:3px}.app-shell .preview-panel{padding:10px}.app-shell .preview-panel .metrics{gap:8px}.app-shell .preview-top>div:first-child>span{display:none}.app-shell .preview-panel .metrics span{white-space:nowrap}}
+@media(max-height:750px) and (min-width:761px){.app-rail{padding-top:10px}.rail-pages{gap:4px}.app-rail .rail-page.icon-button{height:54px;min-height:54px}.app-shell .workspace-config{min-height:46px;padding-top:7px;padding-bottom:7px}.app-shell .preview-panel{padding-top:8px;padding-bottom:9px}.app-shell #stage{min-height:160px}.app-shell #status{max-height:40px}}
+@media(max-width:760px){body.app-shell{grid-template-columns:58px minmax(0,1fr);overflow:hidden}.shell-title{padding:0 8px;gap:5px;flex-wrap:nowrap}.shell-title .brand{gap:0;flex:0 0 27px}.shell-title .header-actions{gap:0;min-width:0;flex-shrink:1}.shell-title .header-actions button{width:28px;height:29px;min-width:28px}.device-badge{padding:4px 5px;max-width:96px;overflow:hidden;font-size:10px;margin:0 4px 0 0;flex:0 1 auto}.device-badge #connectionBadge{overflow:hidden;text-overflow:ellipsis}.app-rail{padding:12px 3px 7px}.app-rail .rail-page.icon-button{width:48px;height:57px;min-height:57px;gap:6px}.app-rail .rail-label{font-size:9px}.app-rail .rail-bottom .icon-button{width:39px;height:39px;min-height:39px}.app-shell main,.app-shell[data-page=setup] main,.app-shell[data-page=task] main{display:flex;overflow:auto;overscroll-behavior:contain}.app-shell .workspace{min-height:520px;height:72vh;max-height:640px;order:-1;flex-shrink:0}.app-shell .left-panel,.app-shell .right-panel{overflow:visible;scrollbar-gutter:auto;display:block;flex:0 0 auto;max-height:none;width:100%}.app-shell .workspace-config{gap:5px;min-height:47px;padding:7px 9px}.config-item{gap:4px}.app-shell .config-item select{max-width:102px;min-width:80px;font-size:11px;height:30px}.app-shell .config-item .icon-button{width:24px;min-width:24px;padding:4px}.config-item>span>.ui-icon{width:14px;height:14px}.app-shell .toolbar{flex-wrap:wrap;gap:4px;height:auto;min-height:48px;padding:6px 8px}.app-shell .toolbar-end{gap:1px;margin-left:auto;flex-wrap:nowrap}.app-shell .toolbar-end .icon-button{width:26px;min-width:26px;height:29px;padding:6px}.app-shell .segmented button{width:30px;min-width:30px;height:29px;padding:6px}.icon-toggle{width:28px;height:29px;padding:5px}.app-shell .preview-panel{padding:9px 10px}.app-shell .preview-top{flex-wrap:nowrap}.app-shell .preview-top .row{gap:1px}.app-shell .preview-panel .metrics{gap:5px 9px;font-size:10px}.app-shell #stage{min-height:180px}.app-shell #status{max-height:48px;font-size:10px}.app-status{padding:0 8px;font-size:10px;gap:7px}.status-state{max-width:100%;flex:1}.app-status #saveStatus{display:none}.mode-panel>section,.mode-panel>details,.right-panel>section{padding:18px 17px}.app-error{top:52px;left:66px;right:8px}.devices-view{padding:23px 15px}.devices-heading h1{font-size:22px}.device-card{margin:20px auto;grid-template-columns:1fr}.device-card-content{padding:24px 18px}.device-visual .printer-art{width:170px}.device-visual{padding:13px}.device-card-heading h2{font-size:23px}.device-health>div{gap:10px}.device-form{padding:21px 16px}.app-shell #calibrationDialog{padding:23px 14px}.cal-page-heading h1{font-size:22px}.cal-page-heading p{font-size:11px}.app-shell .cal-card h2{font-size:19px}.cal-summary-panel{grid-template-columns:1fr}.app-shell .cal-steps li span{display:none}.app-shell dialog:not(.calibration-page){padding:20px 17px;max-width:calc(100vw - 20px)}.native-window .shell-title{padding-right:140px}.native-window .device-badge{display:none}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
