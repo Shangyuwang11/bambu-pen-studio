@@ -1,0 +1,12 @@
+更新与数据 / Updates & data
+
+• 新增“更新与数据”：自动检查 GitHub 正式版本，也可手动检查。
+• 在软件中下载并校验更新；空闲时可更新并重启，不会中断绘画或校准。
+• 更新前保存作品并备份本机配置，更新只替换程序 EXE。
+• 可直接打开数据文件夹；图片、排版、校准配置和已保存的打印机资料继续沿用。
+• 中英文界面均支持。安装包不包含开发者的个人资料或打印机访问码。
+
+First install: download and open the Windows x64 EXE below.
+Older versions need this one manual upgrade to enable in-app updates.
+The new Updates & data panel checks stable GitHub releases, downloads and verifies SHA-256, and installs only when the printer is idle. Existing projects and settings stay in the same user data folder and are backed up before installation.
+This build supports A1 mini hardware. A1 / P1S remain layout/export only.

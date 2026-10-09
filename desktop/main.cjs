@@ -1,5 +1,6 @@
 'use strict';
-const {app,BrowserWindow,ipcMain,dialog,Menu,screen,safeStorage,powerSaveBlocker,powerMonitor,clipboard}=require('electron');
+const {app,BrowserWindow,ipcMain,dialog,Menu,screen,safeStorage,powerSaveBlocker,powerMonitor,clipboard,shell}=require('electron');
+const {createUpdater,busyForUpdate,backupData,RELEASES}=require('./updates.cjs');
 const fs=require('node:fs'),path=require('node:path');
 const {createBridge}=require('../bridge/server.cjs'),C=require('../core.js'),M=require('../machine.js');
 const {createAutoConnect}=require('./autoconnect.cjs');
@@ -11,9 +12,32 @@ const profileDirectory=require('./profile-directory.cjs').chooseProfileDirectory
 app.setPath('userData',profileDirectory.directory);
 const preview=!!process.env.A1_PEN_TEST_DATA&&process.env.A1_PEN_PREVIEW==='1';
 let uiPresented=false,win,bridge,autoConnect,connectionControls,connectionLifecycle,quitting=false,closing=false,powerId=null,powerTimer=null,connectError='',initialData=null;
-let uiLanguage='zh-CN';
+let uiLanguage='zh-CN',updater,updateTimer,updateStartTimer;
+function updateState(){const target=process.env.A1_PEN_LAUNCHER_PATH;return {...updater.snapshot(),dataDirectory:app.getPath('userData'),canInstall:process.platform==='win32'&&!!target&&path.isAbsolute(target)&&path.extname(target).toLowerCase()==='.exe'&&fs.existsSync(target)};}
+async function installUpdate(){
+ if(closing||quitting||busyForUpdate(bridge.snapshot()))throw Error(nt('绘画或校准结束后才能更新。'));
+ if(!updateState().canInstall)throw Error(nt('请从下载的 EXE 启动软件后再更新。'));
+ let helper;closing=true;autoConnect.pause();
+ try{
+  if(autoConnect.status().connecting)await autoConnect.connect();
+  if(busyForUpdate(bridge.snapshot()))throw Error(nt('绘画或校准结束后才能更新。'));
+  const item=await updater.verifiedFile();
+  await win.webContents.executeJavaScript('window.PenDesktop.flush()');
+  // Checking and downloading do not alter data. Installation always saves and
+  // snapshots the durable profile before replacing only the portable launcher.
+  backupData(app.getPath('userData'),item.version);
+  if(busyForUpdate(bridge.snapshot()))throw Error(nt('绘画或校准结束后才能更新。'));
+  const job=path.join(app.getPath('userData'),'updates','install-job.json');
+  atomic(job,{pid:process.pid,target:path.resolve(process.env.A1_PEN_LAUNCHER_PATH),source:item.file,sha256:item.sha256,version:item.version,result:path.join(app.getPath('userData'),'updates','install-result.json')});
+  const powershell=path.join(process.env.SystemRoot,'System32','WindowsPowerShell','v1.0','powershell.exe');
+  helper=require('node:child_process').spawn(powershell,['-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',path.join(__dirname,'update-helper.ps1'),'-Manifest',job],{detached:true,stdio:'ignore',windowsHide:true});
+  await new Promise((resolve,reject)=>{helper.once('spawn',resolve);helper.once('error',reject);});
+  await bridge.close();connectionLifecycle.stop();releasePower();helper.unref();finishQuit();return updateState();
+ }catch(e){helper?.kill();closing=false;autoConnect.resume();throw e;}
+}
 const uiLabels={'文件':'File','保存作品':'Save project','退出':'Quit','编辑':'Edit','撤销':'Undo','重做':'Redo','剪切':'Cut','复制':'Copy','粘贴':'Paste','显示':'View','恢复大小':'Actual size','放大':'Zoom in','缩小':'Zoom out','全屏':'Full screen','帮助':'Help','换笔与桌面版使用说明':'Getting started','拓竹写字机':'Bambu Pen Studio','外部资料链接':'External reference','复制链接':'Copy link','关闭':'Close','保存作品或导出文件':'Save project or export','当前仍在执行机器动作':'The printer is still moving','继续运行':'Keep running','停止后退出':'Stop and quit','正在上传或启动完整文件，请等启动确认后再关闭。':'Uploading or starting a file. Wait for startup confirmation before closing.','机器动作尚未结束，窗口保持打开，请查看状态。':'Motion has not finished. The window will remain open. Check printer status.','绘图会等待已发送指令确认完成，再抬笔返回待机位置；校准会在当前已发送动作结束后停住，请现场观察笔尖。':'Drawing waits for sent commands, then lifts the pen and returns to standby. Calibration stops after the current movement. Watch the pen at the printer.','未能完成关闭':'Could not close','拓竹写字机启动失败':'Could not start Bambu Pen Studio'};
 const nt=s=>uiLanguage==='en'?(uiLabels[s]||s):s;
+Object.assign(uiLabels,{'绘画或校准结束后才能更新。':'Finish drawing or calibration before updating.','请从下载的 EXE 启动软件后再更新。':'Start the downloaded EXE to enable in-app installation.'});
 const connectionEvents=[],motionEvents=[];
 function motionEvent(value){motionEvents.push(value);if(motionEvents.length>40)motionEvents.shift();try{atomic(path.join(app.getPath('userData'),'motion-log.json'),motionEvents);}catch{}}
 function connectionEvent(value){connectionEvents.push(value);if(connectionEvents.length>80)connectionEvents.shift();try{atomic(path.join(app.getPath('userData'),'connection-log.json'),connectionEvents);}catch{}}
@@ -37,6 +61,7 @@ function loadPair(){return pairStore.load();}
 function publicPair(){return pairStore.publicPair();}
 async function start(){
  fs.mkdirSync(app.getPath('userData'),{recursive:true});
+ updater=createUpdater({version:app.getVersion(),directory:app.getPath('userData')});
  try{uiLanguage=JSON.parse(fs.readFileSync(path.join(app.getPath('userData'),'ui-preferences.json'),'utf8')).language;}catch{uiLanguage=preview||app.getLocale().startsWith('zh')?'zh-CN':'en';}if(!['zh-CN','en'].includes(uiLanguage))uiLanguage='en';
  try{const log=path.join(app.getPath('userData'),'connection-log.json');if(fs.statSync(log).size<65536){const old=JSON.parse(fs.readFileSync(log,'utf8'));if(Array.isArray(old))for(const item of old.slice(-60)){if(/^[a-z-]+$/.test(item.event)&&Number.isFinite(item.at))connectionEvents.push({event:item.event,at:item.at,...(Number.isInteger(item.attempts)?{attempts:item.attempts}:{})});}}}catch{}
  connectionEvent({event:'app-start',at:Date.now(),version:app.getVersion()});
@@ -50,6 +75,14 @@ async function start(){
  ipcMain.on('pen:bootstrap',event=>{try{trusted(event);event.returnValue={...initialData,language:uiLanguage};}catch{event.returnValue=null;}});
  ipcMain.handle('pen:language',(event,value)=>{trusted(event);if(!['zh-CN','en'].includes(value))throw Error('Invalid language');uiLanguage=value;atomic(path.join(app.getPath('userData'),'ui-preferences.json'),{language:value});installMenu();win.setTitle(nt('拓竹写字机'));return value;});
  ipcMain.handle('pen:save',(event,value)=>{trusted(event);const data=validateWork(value);atomic(workFile(),data);initialData=data;return {saved:true};});
+ ipcMain.handle('pen:update-status',event=>{trusted(event);return updateState();});
+ ipcMain.handle('pen:update-check',async event=>{trusted(event);await updater.check();return updateState();});
+ ipcMain.handle('pen:update-download',async event=>{trusted(event);await updater.download();return updateState();});
+ ipcMain.handle('pen:update-auto',(event,value)=>{trusted(event);updater.setAutoCheck(value);return updateState();});
+ ipcMain.handle('pen:update-install',event=>{trusted(event);return installUpdate();});
+ ipcMain.handle('pen:update-file',async event=>{trusted(event);shell.showItemInFolder((await updater.verifiedFile()).file);});
+ ipcMain.handle('pen:open-releases',event=>{trusted(event);return shell.openExternal(RELEASES);});
+ ipcMain.handle('pen:open-data',async event=>{trusted(event);await win.webContents.executeJavaScript('window.PenDesktop.flush()');const error=await shell.openPath(app.getPath('userData'));if(error)throw Error(error);});
  ipcMain.handle('pen:meta',event=>{trusted(event);return {preview,paired:fs.existsSync(pairFile()),bundledPairAvailable:pairStore.hasBundled(),printer:publicPair(),autoConnect:autoConnect.status(),connectionEvents:connectionEvents.slice(),connectError:autoConnect.status().error||connectError,version:app.getVersion(),dataDirectory:app.getPath('userData')};});
  ipcMain.handle('pen:network-online',event=>{trusted(event);if(closing||quitting)return;return connectionLifecycle.wake();});
  ipcMain.handle('pen:reconnect',event=>{trusted(event);return connectionControls.reconnect();});
@@ -76,6 +109,8 @@ async function start(){
  const uiState=await win.webContents.executeJavaScript('window.PenUIBoot?.settled || Promise.resolve("missing")');
  if(uiState==='missing')throw Error('启动界面文件未能载入，请重新打开软件。已有配置保留。');
  uiPresented=true;connectionEvent({event:uiState==='ready'?'ui-ready':'ui-startup-error',at:Date.now()});
+ const checkAutomatically=()=>{if(!preview&&!closing&&!quitting&&updater.snapshot().autoCheck)updater.check().catch(()=>{});};
+ updateStartTimer=setTimeout(checkAutomatically,15000);updateStartTimer.unref();updateTimer=setInterval(checkAutomatically,6*60*60*1000);updateTimer.unref();
  if(!(process.env.A1_PEN_TEST_DATA&&process.env.A1_PEN_TEST_HIDE==='1')){win.show();win.focus();}
  powerTimer=setInterval(()=>{const busy=bridge.snapshot().localBusy;if(busy&&powerId===null)powerId=powerSaveBlocker.start('prevent-app-suspension');if(!busy&&powerId!==null){powerSaveBlocker.stop(powerId);powerId=null;}},1000);powerTimer.unref();
  if(process.env.A1_PEN_TEST_READY)fs.writeFileSync(process.env.A1_PEN_TEST_READY,JSON.stringify({pid:process.pid,origin:bridge.origin,version:app.getVersion(),sandbox:win.webContents.getLastWebPreferences().sandbox,userData:app.getPath('userData')}));

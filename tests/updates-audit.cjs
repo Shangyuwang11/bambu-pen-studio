@@ -1,0 +1,23 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),crypto=require('node:crypto');
+const {createUpdater,newer,releaseInfo,response,busyForUpdate,backupData}=require('../desktop/updates.cjs');
+const root=fs.mkdtempSync(path.join(os.tmpdir(),'pen-updates-')),bytes=Buffer.from('verified test payload'),digest=crypto.createHash('sha256').update(bytes).digest('hex'),name='Bambu-Pen-Studio-0.21.0-win-x64.exe',url=`https://github.com/Shangyuwang11/bambu-pen-studio/releases/download/v0.21.0/${name}`,release={tag_name:'v0.21.0',draft:false,prerelease:false,body:'test release',assets:[{name,browser_download_url:url,size:bytes.length,digest:'sha256:'+digest}]};
+let checks=0;const pass=()=>checks++;
+(async()=>{
+ assert(newer('0.20.10','0.20.9'));assert(!newer('v0.20.0','0.20.1'));assert(!newer('0.20.1','0.20.1'));assert.throws(()=>newer('0.20.2-beta','0.20.1'));pass();
+ assert.equal(releaseInfo({...release,prerelease:true}),null);assert.throws(()=>releaseInfo({...release,assets:[{...release.assets[0],browser_download_url:'https://example.com/setup.exe'}]}));assert.throws(()=>releaseInfo({...release,assets:[{...release.assets[0],digest:null}]}));pass();
+ await assert.rejects(response('http://github.com/test',()=>{},AbortSignal.timeout(500)));await assert.rejects(response('https://github.com/test',async()=>new Response(null,{status:302,headers:{location:'https://evil.example/file'}}),AbortSignal.timeout(500)));pass();
+ const make=(sub,fetchImpl)=>createUpdater({version:'0.20.1',directory:path.join(root,sub),fetchImpl});
+ const absent=make('absent',async()=>new Response('',{status:404}));assert.equal((await absent.check()).phase,'unpublished');pass();
+ const offline=make('offline',async()=>{throw Error('offline');});assert.equal((await offline.check()).phase,'error');assert.match(offline.snapshot().error,/offline/);pass();
+ const current=make('current',async()=>Response.json({...release,tag_name:'v0.20.1',assets:[{...release.assets[0],name:'Bambu-Pen-Studio-0.20.1-win-x64.exe',browser_download_url:url.replaceAll('0.21.0','0.20.1')}]}));assert.equal((await current.check()).phase,'current');pass();
+ let requests=0;const good=make('good',async target=>{requests++;return target.includes('/latest')?Response.json(release):new Response(bytes);});assert.equal((await good.check()).phase,'available');assert.equal((await good.download()).phase,'downloaded');assert.deepEqual(fs.readFileSync((await good.verifiedFile()).file),bytes);pass();
+ good.setAutoCheck(false);const restored=make('good',async()=>Response.json(release));assert.equal(restored.snapshot().autoCheck,false);assert.equal((await restored.check()).phase,'downloaded');assert.equal(requests,2);pass();
+ const file=(await good.verifiedFile()).file;fs.appendFileSync(file,'tampered');await assert.rejects(good.verifiedFile(),/changed/);pass();
+ const bad=make('bad',async target=>target.includes('/latest')?Response.json(release):new Response(Buffer.alloc(bytes.length)));await bad.check();assert.equal((await bad.download()).phase,'error');assert(!fs.existsSync(path.join(root,'bad','updates',name)));assert(!fs.existsSync(path.join(root,'bad','updates',name+'.part')));pass();
+ const short=make('short',async target=>target.includes('/latest')?Response.json(release):new Response('x'));await short.check();assert.equal((await short.download()).phase,'error');pass();
+ let resolve;const duplicate=make('duplicate',()=>new Promise(r=>resolve=r));const first=duplicate.check();assert.equal((await duplicate.check()).phase,'checking');resolve(Response.json(release));await first;assert.equal(duplicate.snapshot().phase,'available');pass();
+ for(const s of [{busy:true},{localBusy:true},{printer:{connected:true,state:{gcode_state:'RUNNING'}}},{printer:{connected:true,state:{gcode_state:'PAUSE'}}}])assert(busyForUpdate(s));assert(!busyForUpdate({busy:false,printer:{connected:true,state:{gcode_state:'FINISH'}}}));pass();
+ const data=path.join(root,'profile');fs.mkdirSync(data);fs.writeFileSync(path.join(data,'workspace.json'),JSON.stringify({state:{objects:[{source:'data:image/png;base64,demo'}]},presets:[{name:'saved profile'}]}));fs.writeFileSync(path.join(data,'printer.enc.json'),'encrypted-demo');const original=fs.readFileSync(path.join(data,'workspace.json'));const backup=backupData(data,'0.21.0');assert.deepEqual(fs.readFileSync(path.join(backup,'workspace.json')),original);assert.deepEqual(fs.readFileSync(path.join(data,'workspace.json')),original);assert.equal(fs.readFileSync(path.join(backup,'printer.enc.json'),'utf8'),'encrypted-demo');pass();
+ console.log(`PASS ${checks} updater checks; test data: ${root}`);
+})().catch(e=>{console.error(e);process.exitCode=1;});

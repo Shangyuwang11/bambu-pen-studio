@@ -1,0 +1,28 @@
+发布一个可被软件发现的新版本
+
+1. 修改 package.json 的 version，并同步 index.html / desktop/preload.cjs 中的显示版本。
+2. 写 docs/release-版本号.txt。不要重复使用已经发布的版本号。
+3. npm install；npx playwright install chromium；npm test。
+4. npm run build:win。dist 里会生成 Windows x64 EXE、SHA256SUMS.txt 和构建信息。
+5. 提交源码并 git push。首次发布前运行 gh auth login 登录维护者账号。
+6. node scripts/publish-release.cjs。脚本先建立草稿，上传并核对安装包，再发布正式 Release。
+
+其他人的软件会在打开约 15 秒后，以及运行期间每 6 小时检查一次，也可手动点“检查更新”。检查只访问公开发布信息，不上传图片、打印机信息或配置。预发布和草稿不会推送。
+用户主动下载，经过 GitHub 提供的 SHA-256 摘要校验后，可点“更新并重启”。这里是 HTTPS / GitHub 发布资产的完整性验证，不是 Windows Authenticode 签名。
+原便携 EXE 会被新程序替换，旧程序保留为 .previous；系统用户目录下的 .a1-pen-studio 不会被覆盖。安装前的配置备份在该目录的 backups 中。
+从源码或旧启动器运行时，下载后可“查看下载文件”，手动打开新版 EXE。0.20.0 及更早版本没有更新按钮，首次需手动换到 0.20.1。
+
+数据保存
+%USERPROFILE%\.a1-pen-studio\workspace.json：当前作品（含图像数据和路径）、纸张、校准配置与绘画参数。
+printer.enc.json：本机加密的打印机资料。不要放进 GitHub 或公开安装包。
+connection-preferences.json：自动连接偏好。
+ui-preferences.json：界面语言。
+updates：已下载的新程序；backups：更新前的数据备份。
+在软件里点“保存作品”会另存一个作品 JSON，路径由用户选择。EXE 本身不保存作品。
+原图片内容会嵌入作品；删除原图片文件不会自动删除作品里的图片。请把重要作品另存，自动恢复只表示当前工作区。
+机密资料的加密依赖当前 Windows 用户环境；跨电脑迁移作品用作品 JSON，目标电脑重新连接打印机。
+
+Release publishing (English)
+Increment package.json and displayed versions; add docs/release-VERSION.txt; run npm test and npm run build:win; commit and push source; authenticate gh; run node scripts/publish-release.cjs.
+Published stable releases must contain Bambu-Pen-Studio-VERSION-win-x64.exe with GitHub's SHA-256 digest. The publisher stages a draft and verifies uploads before making it public.
+Local data lives outside the EXE in %USERPROFILE%\.a1-pen-studio. Save project JSON files separately for backups and moving artwork between computers.

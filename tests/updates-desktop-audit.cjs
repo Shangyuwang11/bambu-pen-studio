@@ -1,0 +1,20 @@
+'use strict';
+const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict');
+const {_electron}=require(process.env.A1_PEN_PLAYWRIGHT||'playwright'),C=require('../core.js'),M=require('../machine.js'),P=require('../position-presets.js');
+const root=path.resolve(__dirname,'..'),data=fs.mkdtempSync(path.join(os.tmpdir(),'pen-update-ui-')),output=path.join(root,'test-output');fs.mkdirSync(output,{recursive:true});
+const s=C.initial();s.objects=[C.newText('Saved artwork')];const profile={...M.defaults(s),name:'Saved pen',downZ:18,upZ:21,confirmed:true};const preset=P.capture({busy:false,position:{x:100,y:90,z:60},wizard:{phase:'complete',profile,calibrationPoint:{x:100,y:90,z:18},returnTo:{x:100,y:90,z:60}}},profile.name,{penSettings:s.pen});
+fs.writeFileSync(path.join(data,'workspace.json'),JSON.stringify({state:s,profile,library:[],presets:[preset],activePreset:preset.id,penLibraryVersion:2,backings:[]}));
+let app,page;const errors=[];
+(async()=>{try{
+ const env={...process.env,A1_PEN_TEST_DATA:data,A1_PEN_PREVIEW:'1',A1_PEN_TEST_HIDE:'1',A1_PEN_PORT:'0'};delete env.ELECTRON_RUN_AS_NODE;
+ app=await _electron.launch({executablePath:process.env.A1_PEN_ELECTRON,args:[root],env,timeout:30000});page=await app.firstWindow();page.on('pageerror',e=>errors.push(e.message));await page.waitForFunction(()=>document.documentElement.dataset.uiBoot==='ready');
+ await page.locator('#openUpdates').click();assert(await page.locator('#updatesDialog').evaluate(n=>n.open));assert.equal(await page.locator('#updatesDirectory').textContent(),data);assert.equal(await page.locator('#updatesVersion').textContent(),'当前版本 0.20.1');
+ await page.locator('#updatesAuto').uncheck();await page.waitForFunction(()=>!document.getElementById('updatesAuto').disabled);assert.equal(JSON.parse(fs.readFileSync(path.join(data,'update-preferences.json'))).autoCheck,false);
+ await page.locator('#updatesCheck').click();await page.waitForFunction(()=>!document.getElementById('updatesCheck').disabled,{},{timeout:30000});assert.match(await page.locator('#updatesStatus').textContent(),/还没有发布|最新正式版本/);await page.screenshot({path:path.join(output,'updates-zh.png')});
+ await page.locator('#updatesClose').click();await page.locator('#appLanguage').selectOption('en');await page.locator('#openUpdates').click();assert.equal(await page.locator('#updatesTitle').textContent(),'Updates & data');assert.equal(await page.locator('#updatesCheck').textContent(),'Check for updates');await page.screenshot({path:path.join(output,'updates-en.png')});
+ await page.evaluate(()=>PenDesktop.flush());let saved=JSON.parse(fs.readFileSync(path.join(data,'workspace.json'),'utf8'));assert.equal(saved.state.objects[0].text,'Saved artwork');assert.equal(saved.presets[0].name,'Saved pen');assert.equal(saved.presets[0].profile.downZ,18);
+ const denied=await page.evaluate(()=>PenDesktopAPI.installUpdate().then(()=>null,e=>e.message));assert(denied);assert.deepEqual(errors,[]);
+ await app.close();app=null;
+ app=await _electron.launch({executablePath:process.env.A1_PEN_ELECTRON,args:[root],env,timeout:30000});page=await app.firstWindow();await page.waitForFunction(()=>document.documentElement.dataset.uiBoot==='ready');await page.locator('#openUpdates').click();assert.equal(await page.locator('#updatesAuto').isChecked(),false);assert.equal(await page.locator('#updatesTitle').textContent(),'Updates & data');assert.equal(await page.evaluate(()=>PenStudio.getState().objects[0].text),'Saved artwork');assert.equal(JSON.parse(fs.readFileSync(path.join(data,'workspace.json'),'utf8')).presets[0].profile.downZ,18);
+ console.log('PASS actual Electron UI, bilingual panel, GitHub check, saved update preference, project + calibration retained after restart; '+data);
+}finally{await app?.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -9,18 +9,18 @@ using System.Windows.Forms;
 using System.Drawing;
 [assembly: AssemblyTitle("Bambu Pen Studio")]
 [assembly: AssemblyProduct("Bambu Pen Studio")]
-[assembly: AssemblyVersion("0.20.0.0")]
+[assembly: AssemblyVersion("@@VERSION@@.0")]
 static class Launcher {
  static bool Chinese=System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName=="zh";
  static string T(string zh,string en){return Chinese?zh:en;}
  const string BuildId="@@BUILD@@";
  [STAThread] static void Main(string[] args) {
-  if(!String.IsNullOrEmpty(Environment.GetEnvironmentVariable("A1_PEN_TEST_DATA"))&&Environment.GetEnvironmentVariable("A1_PEN_TEST_HIDE")=="1") {string hiddenExe=Prepare();ProcessStartInfo hidden=new ProcessStartInfo(hiddenExe){UseShellExecute=false,CreateNoWindow=true,WorkingDirectory=Path.GetDirectoryName(hiddenExe)};foreach(string arg in args)hidden.Arguments+=(hidden.Arguments.Length>0?" ":"")+Quote(arg);Process.Start(hidden);return;}
+  if(!String.IsNullOrEmpty(Environment.GetEnvironmentVariable("A1_PEN_TEST_DATA"))&&Environment.GetEnvironmentVariable("A1_PEN_TEST_HIDE")=="1") {string hiddenExe=Prepare();ProcessStartInfo hidden=new ProcessStartInfo(hiddenExe){UseShellExecute=false,CreateNoWindow=true,WorkingDirectory=Path.GetDirectoryName(hiddenExe)};foreach(string arg in args)hidden.Arguments+=(hidden.Arguments.Length>0?" ":"")+Quote(arg);hidden.EnvironmentVariables["A1_PEN_LAUNCHER_PATH"]=Assembly.GetExecutingAssembly().Location;Process.Start(hidden);return;}
   Application.EnableVisualStyles();Application.SetCompatibleTextRenderingDefault(false);
   Form form=new Form {Text=T("拓竹写字机","Bambu Pen Studio"),Width=430,Height=145,StartPosition=FormStartPosition.CenterScreen,FormBorderStyle=FormBorderStyle.FixedDialog,MaximizeBox=false,MinimizeBox=false};
   Label label=new Label {Text=T("正在打开拓竹写字机…首次启动需要展开内置运行环境。","Opening Bambu Pen Studio…\nFirst launch extracts the included runtime."),Dock=DockStyle.Fill,TextAlign=ContentAlignment.MiddleCenter,Font=new Font("Microsoft YaHei UI",10)};form.Controls.Add(label);
   bool finished=false;form.FormClosing+=(s,e)=>{if(!finished)e.Cancel=true;};
-  form.Shown+=(s,e)=>{Thread worker=new Thread(()=>{try{string exe=Prepare();ProcessStartInfo info=new ProcessStartInfo(exe){UseShellExecute=false,CreateNoWindow=true,WorkingDirectory=Path.GetDirectoryName(exe)};foreach(string arg in args)info.Arguments+=(info.Arguments.Length>0?" ":"")+Quote(arg);Process.Start(info);form.BeginInvoke(new Action(()=>{finished=true;form.Close();}));}catch(Exception error){form.BeginInvoke(new Action(()=>{MessageBox.Show(form,error.Message,T("未能打开拓竹写字机","Could not open Bambu Pen Studio"),MessageBoxButtons.OK,MessageBoxIcon.Error);finished=true;form.Close();}));}});worker.IsBackground=true;worker.Start();};
+  form.Shown+=(s,e)=>{Thread worker=new Thread(()=>{try{string exe=Prepare();ProcessStartInfo info=new ProcessStartInfo(exe){UseShellExecute=false,CreateNoWindow=true,WorkingDirectory=Path.GetDirectoryName(exe)};foreach(string arg in args)info.Arguments+=(info.Arguments.Length>0?" ":"")+Quote(arg);info.EnvironmentVariables["A1_PEN_LAUNCHER_PATH"]=Assembly.GetExecutingAssembly().Location;Process.Start(info);form.BeginInvoke(new Action(()=>{finished=true;form.Close();}));}catch(Exception error){form.BeginInvoke(new Action(()=>{MessageBox.Show(form,error.Message,T("未能打开拓竹写字机","Could not open Bambu Pen Studio"),MessageBoxButtons.OK,MessageBoxIcon.Error);finished=true;form.Close();}));}});worker.IsBackground=true;worker.Start();};
   Application.Run(form);
  }
  static string Quote(string value){var result=new System.Text.StringBuilder("\"");int slashes=0;foreach(char c in value){if(c=='\\'){slashes++;continue;}if(c=='"'){result.Append('\\',slashes*2+1);result.Append(c);}else{result.Append('\\',slashes);result.Append(c);}slashes=0;}result.Append('\\',slashes*2);result.Append('"');return result.ToString();}
