@@ -27,9 +27,9 @@ See [publishing and storage details / 发布步骤与数据说明](docs/UPDATES.
 
 ## Support / 支持范围
 
-Version 0.20.1 targets Windows 10/11 x64. Live connection and calibration support **A1 mini**. **A1 and P1S support layout/export only**, not live control. Preview is a simulation, not a live position sensor.
+Version 0.20.2 targets Windows 10/11 x64. Live connection and calibration support **A1 mini**. **A1 and P1S support layout/export only**, not live control. Preview is a simulation, not a live position sensor.
 
-0.20.1 面向 Windows 10/11 x64。A1 mini 支持连接与校准；A1、P1S 当前仅支持排版和导出。预览不是机器位置传感器。
+0.20.2 面向 Windows 10/11 x64。A1 mini 支持连接与校准；A1、P1S 当前仅支持排版和导出。预览不是机器位置传感器。
 
 ## Run from source / 从源码运行
 

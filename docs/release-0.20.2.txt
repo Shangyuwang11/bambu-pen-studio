@@ -1,0 +1,11 @@
+更新与数据 / Updates & data
+
+• 自动检查 GitHub 正式版本，支持在软件中下载、校验、更新并重启。
+• 新增分段下载与断点续传：网络中断后继续下载，不必重新下载整个安装包。
+• 更新前保存作品并备份配置；正在绘画或校准时不会安装更新。
+• 图片、排版、校准配置与打印机资料保留在原本机数据目录，和 EXE 分开。
+• “打开数据文件夹”可直接找到资料。安装包不包含个人作品或打印机访问码。
+
+Download and open the Windows x64 EXE below. Builds before 0.20.1 need one manual upgrade to enable in-app updates.
+Updates now use resumable byte-range downloads, retry transient failures and verify the complete SHA-256 digest before installation. Drawing/calibration block installation. Local projects and settings remain in their original directory and are backed up before updating.
+A1 mini supports hardware control. A1 / P1S remain layout/export only.
