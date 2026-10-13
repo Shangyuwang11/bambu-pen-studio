@@ -23,17 +23,17 @@ A local desktop workspace for pen drawing with Bambu Lab printers. Community pro
 
 [Download the latest Windows EXE / 下载最新 Windows 程序](https://github.com/Shangyuwang11/bambu-pen-studio/releases/latest).
 
-From 0.20.1, open **Updates & data** in the top toolbar. Automatic checks notify you; download and restart only when you choose. Drawing and calibration block installation. Projects and settings are backed up before updating and remain in the same user directory. Older builds need one manual upgrade to enable this feature.
+Open **Settings → Updates & data** in the lower-left corner. Automatic checks notify you; download and restart only when you choose. Drawing and calibration block installation. Projects and settings are backed up before updating and remain in the same user directory. Older builds need one manual upgrade to enable this feature.
 
-从 0.20.1 开始，右上角 **更新与数据** 可以检查和下载新版本；自动检查只提示，不会自行重启。绘画与校准时不能安装更新。更新前保存作品、备份配置，继续使用原数据目录。旧版本首次需要手动换到带更新功能的 EXE。
+左下角 **设置 → 更新与数据** 可以检查和下载新版本；自动检查只提示，不会自行重启。绘画与校准时不能安装更新。更新前保存作品、备份配置，继续使用原数据目录。旧版本首次需要手动换到带更新功能的 EXE。
 
 See [publishing and storage details / 发布步骤与数据说明](docs/UPDATES.txt).
 
 ## Support / 支持范围
 
-Version 0.21.0 targets Windows 10/11 x64. Live connection and calibration support **A1 mini**. **A1 and P1S support layout/export only**, not live control. Preview is a simulation, not a live position sensor.
+Version 0.22.0 targets Windows 10/11 x64. **A1 mini, A1 and P1S** support LAN connection, calibration, streamed drawing and full-file upload. **A1 / P1S support is experimental and has not been tested on physical hardware.** Model detection, motion bounds, task packaging and simulated workflows are tested. Preview is a simulation, not a position sensor. See [model support and references](docs/MODEL-SUPPORT.txt).
 
-0.21.0 面向 Windows 10/11 x64。A1 mini 支持连接与校准；A1、P1S 当前仅支持排版和导出。预览不是机器位置传感器。
+0.22.0 支持 A1 mini、A1、P1S 的局域网连接、校准、分段绘画与整图上传。**A1 / P1S 为实验性适配，已完成代码与模拟流程测试，尚未实机验证。** 画布与校准配置必须匹配实际机型；连接页可一键切换画布。P1S 绘画避开左侧 18 mm，Z 上限 250 mm。预览不是机器位置传感器。
 
 ## Run from source / 从源码运行
 
@@ -67,9 +67,9 @@ npx playwright install chromium
 node scripts/test.cjs
 ```
 
-Tests use synthetic printer state and temporary credential records; they do not connect to physical hardware. The release was checked with clean desktop startup, profile recovery and read-only A1 mini status. No physical drawing test was performed in the 0.20.0 release audit.
+Tests use synthetic printer state and temporary credential records; they do not connect to physical hardware. This release checks machine identity, model-specific limits, calibration, repeated tasks, full-file metadata, pairing persistence and actual UI interactions with mock printers. No physical printer is operated by these tests.
 
-测试使用模拟打印机与测试凭据，不操作实机。本版另完成独立桌面启动、配置恢复及实机只读状态检查，没有在本轮发布检查中进行实体落笔试画。
+测试使用模拟打印机与测试凭据，不操作实机。本版检查了机型识别、运动范围、校准、连续任务、完整任务包、连接资料保存和真实界面交互；本轮不操作实体打印机。
 
 ## Getting started / 开始使用
 

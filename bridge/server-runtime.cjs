@@ -1,11 +1,16 @@
 'use strict';
 const http=require('node:http'),fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),net=require('node:net');
-const {Printer}=require('./mqtt.cjs'),{Ftps}=require('./ftps.cjs'),{prepare,execute}=require('./job.cjs'),cal=require('./calibration.cjs');
-const flow=require('./wizard.cjs'),M=require('../machine.js'),Presets=require('../position-presets.js'),Tuning=require('./live-tuning.cjs'),{createFileSession}=require('./file-session.cjs'),Policy=require('./printer-policy.cjs');
+const {Printer}=require('./mqtt.cjs'),{Ftps}=require('./ftps.cjs'),{prepare,execute}=require('./job.cjs'),Calibration=require('./calibration.cjs');
+const Wizard=require('./wizard.cjs'),Models=require('../printer-models.js'),M=require('../machine.js'),Presets=require('../position-presets.js'),Tuning=require('./live-tuning.cjs'),{createFileSession}=require('./file-session.cjs'),Policy=require('./printer-policy.cjs');
 const {recheckStorage}=require('./storage-recovery.cjs');
 function privateIP(ip){if(net.isIP(ip)!==4)return false;const a=ip.split('.').map(Number);return a[0]===10||(a[0]===192&&a[1]===168)||(a[0]===172&&a[1]>=16&&a[1]<=31);}
 function createBridge(options={}){
  const ROOT=path.resolve(__dirname,'..'),token=crypto.randomBytes(32).toString('hex');let origin='',printer=null,device=null,access='',job=null,busy=false,cancel=false,run={status:'idle'},lastMotion=null,knownPosition=null,calibration=null,wizard=null,live=null,liveJob=null,nativeReturn=null,positionIssue=null,retainedPosition=null,autoReturnAttempt=null;
+ const model=()=>device?.model||'a1-mini',spec=()=>Models.get(model());
+ const cal={...Calibration,position:p=>Calibration.position(p,model()),begin:p=>Calibration.begin(p,model()),move:(session,id,delta)=>Calibration.move({...session,model:model()},id,delta),finish:(session,id,lift,contact)=>Calibration.finish({...session,model:model()},id,lift,contact),directMove:(p,d)=>Calibration.directMove(p,d,model()),jogSteps:(p,d)=>Calibration.jogSteps(p,d,model())};
+ const flow={...Wizard,get PARK(){return spec().park;},create:()=>Wizard.create(model()),returnSteps:(a,b,s,l)=>Wizard.returnSteps(a,b,s,l,model()),zSteps:(a,b)=>Wizard.zSteps(a,b,model()),refineSteps:(a,b,z)=>Wizard.refineSteps(a,b,z,model())};
+ function matching(profile){return !!device&&profile?.machine?.model===device.model&&profile.machine.w===spec().w&&profile.machine.h===spec().h;}
+ function assertModel(profile){if(!matching(profile))throw Error('画布或校准配置与实际连接的 '+(device?.name||'打印机')+' 不一致，请切换为相同机型');}
  const Receipt=require('./position-receipt.cjs'),receipt=Receipt.create({load:options.loadPositionReceipt,save:options.savePositionReceipt});
  const saveReceipt=()=>{if(!busy&&!file.active()&&printer?.connected&&wizard?.phase==='complete'&&wizard.contact)try{receipt.record(device.serial,printer.state,knownPosition,wizard.profile);}catch{}};
  const retainedValid=()=>!!(retainedPosition&&printer?.connected&&retainedPosition.serial===device?.serial&&Number.isInteger(printer.state.home_flag)&&(retainedPosition.homeFlag&7)===(printer.state.home_flag&7));
@@ -28,7 +33,7 @@ function createBridge(options={}){
  async function connect(v){
   if(busy)throw Error('有绘图动作进行中');if(!privateIP(v.ip)||!/^[A-Za-z0-9]{10,30}$/.test(v.serial)||!/^[A-Za-z0-9]{8}$/.test(v.accessCode))throw Error('请填写局域网 IPv4、序列号和8位访问码');
   saveReceipt();busy=true;try{if(printer){printer.removeAllListeners('failure');printer.close();}invalidatePosition('reconnect');if(wizard?.serial!==v.serial)wizard=null;printer=null;device=null;access='';const next=options.printerFactory?options.printerFactory():new Printer({host:v.ip,servername:v.serial,ca:fs.readFileSync(caPath)});
-   try{await next.connect(v.accessCode);if(!next.version.some(x=>x.name==='esp32'&&x.hw_ver==='AP05'))throw Error('本发送流程目前仅核对了 A1 mini AP05');printer=next;next.retainedPositionConfirmed=retainedValid;device={ip:v.ip,serial:v.serial};access=v.accessCode;run={status:'idle'};file.attach(next,v.serial);next.cancelledTaskIsIdle=()=>file.cancelledIdle();next.on('failure',()=>invalidatePosition('connection_lost','连接中断，当前位置待重新建立；已测笔高保留'));next.on('motion-diagnostic',d=>{lastMotion=d;try{options.onMotionDiagnostic?.(d);}catch{}});next.on('update',()=>{const s=next.state;if(receipt.get()&&(Number.isInteger(s.home_flag)&&(s.home_flag&7)!==7||Policy.motionFaulted(s)||s.gcode_state&&!Policy.taskIdle(s))){try{receipt.clear();}catch{}}if(retainedPosition&&(!retainedValid()||Policy.motionFaulted(s)||file.snapshot()?.phase==='foreign'))retainedPosition=null;if(!busy&&knownPosition){const lost=Number.isInteger(s.home_flag)&&(s.home_flag&7)!==7&&!retainedValid(),foreign=s.gcode_state&&!Policy.taskIdle(s)&&!file.cancelledIdle();if(lost||foreign){const reason=lost?'homing_lost':'external_task',message=lost?'打印机已清除 XYZ 归零状态；笔高已保留，需要恢复坐标':'检测到其他机器任务；笔高已保留，需要恢复坐标';invalidatePosition(reason,message);if(!['commands_sent','stopped'].includes(run.status))run={status:'position_required',note:message};}}maybeReturnAfterStop();});if(options.onCredentials)await options.onCredentials({...v});}catch(e){next.close();throw e;}
+   try{await next.connect(v.accessCode);const identity=Models.detect(next.version,v.model||'auto');next.model=identity.model;printer=next;next.retainedPositionConfirmed=retainedValid;device={ip:v.ip,serial:v.serial,...identity};access=v.accessCode;run={status:'idle'};file.attach(next,v.serial);next.cancelledTaskIsIdle=()=>file.cancelledIdle();next.on('failure',()=>invalidatePosition('connection_lost','连接中断，当前位置待重新建立；已测笔高保留'));next.on('motion-diagnostic',d=>{lastMotion=d;try{options.onMotionDiagnostic?.(d);}catch{}});next.on('update',()=>{const s=next.state;if(receipt.get()&&(Number.isInteger(s.home_flag)&&(s.home_flag&7)!==7||Policy.motionFaulted(s)||s.gcode_state&&!Policy.taskIdle(s))){try{receipt.clear();}catch{}}if(retainedPosition&&(!retainedValid()||Policy.motionFaulted(s)||file.snapshot()?.phase==='foreign'))retainedPosition=null;if(!busy&&knownPosition){const lost=Number.isInteger(s.home_flag)&&(s.home_flag&7)!==7&&!retainedValid(),foreign=s.gcode_state&&!Policy.taskIdle(s)&&!file.cancelledIdle();if(lost||foreign){const reason=lost?'homing_lost':'external_task',message=lost?'打印机已清除 XYZ 归零状态；笔高已保留，需要恢复坐标':'检测到其他机器任务；笔高已保留，需要恢复坐标';invalidatePosition(reason,message);if(!['commands_sent','stopped'].includes(run.status))run={status:'position_required',note:message};}}maybeReturnAfterStop();});if(options.onCredentials)await options.onCredentials({...v,model:identity.model});}catch(e){next.close();throw e;}
   }finally{busy=false;}return snapshot();
  }
  async function locked(action){if(busy)throw Error('当前动作尚未完成，请等待');busy=true;let result;try{result=await action();}finally{busy=false;}return result&&Object.hasOwn(result,'busy')?{...result,...snapshot()}:result;}
@@ -47,7 +52,7 @@ function createBridge(options={}){
    if(v.id&&v.id!==wizard?.id)throw Error('校准配置已变化，请刷新后继续');
    const preset=v.preset?Presets.validate(v.preset):null,ref=preset||measured();
    if(preset?.serial&&preset.serial!==device.serial)throw Error('校准配置对应的打印机不匹配');
-   if(!ref||ref.profile.machine.model!=='a1-mini'||!preset&&!ref.profile.confirmed)throw Error('请先选择原校准配置');
+   if(!ref||!matching(ref.profile)||!preset&&!ref.profile.confirmed)throw Error('请先选择原校准配置');
    const profile=M.validateProfile({...ref.profile,confirmed:true}),point=cal.position(ref.calibrationPoint||{...flow.PARK,z:profile.downZ}),target=cal.position({...ref.returnTo||flow.PARK,z:Math.max((ref.returnTo||flow.PARK).z,profile.upZ)}),safeZ=Math.max(flow.PARK.z,target.z,profile.upZ),motion=require('./motion.cjs');
    if(stopped){
     await printer.fresh({force:true,fields:['gcode_state','gcode_file','subtask_name','home_flag','print_error','hms']});
@@ -66,10 +71,10 @@ function createBridge(options={}){
    Promise.resolve().then(async()=>{
     if(cancel)return;await motion.ensureReady(printer);if(cancel)return;
     // First confirm Z alone; do not invent XY from the interrupted drawing.
-    await motion.run(printer,`G21\nG90\nG1 Z${safeZ} F${profile.liftSpeed*60}\n`,180/profile.liftSpeed);
+    await motion.run(printer,`G21\nG90\nG1 Z${safeZ} F${profile.liftSpeed*60}\n`,spec().z/profile.liftSpeed);
     if(knownPosition){knownPosition={...knownPosition,z:safeZ};wizard.position={...knownPosition};}
     if(cancel)return;
-    await motion.run(printer,`G21\nG90\nG1 X${target.x} Y${target.y} F2400\n`,Math.hypot(180,180)/40);
+    await motion.run(printer,`G21\nG90\nG1 X${target.x} Y${target.y} F2400\n`,Math.hypot(spec().w,spec().h)/40);
     knownPosition={x:target.x,y:target.y,z:safeZ};wizard.position={...knownPosition};positionIssue=null;
     if(cancel)return;
     if(Math.abs(safeZ-target.z)>.001){await motion.run(printer,`G21\nG90\nG1 Z${target.z} F${profile.zSpeed*60}\n`,(safeZ-target.z)/profile.zSpeed);knownPosition={...target};wizard.position={...target};}
@@ -78,6 +83,7 @@ function createBridge(options={}){
   }catch(e){if(claimed)retainedPosition=null;throw e;}finally{if(!scheduled)busy=false;}
  }
  async function action(name,v){
+  if(printer?.connected){if(v.profile?.machine)assertModel(v.profile);if(v.preset?.profile?.machine)assertModel(v.preset.profile);if(v.state?.machine)assertModel(v.state);}
   if(['start','start-file','wizard/home','wizard/use-preset','wizard/recover-position','wizard/recover-stopped','wizard/refine','wizard/jog','wizard/finish','calibration/move-z','calibration/finish'].includes(name)){try{receipt.clear();}catch{throw Error('无法更新位置记录，未发送移动');}}
   if(name==='wizard/reuse-position')return locked(async()=>{
    if(v.unchanged!==true)throw Error('请确认机器、纸笔和平台没有移动');if(!printer?.connected||file.active()||wizardActive())throw Error('请先连接打印机并等待任务或校准结束');
@@ -118,7 +124,7 @@ function createBridge(options={}){
   if(name==='wizard/activate-preset')return locked(async()=>{
    if(!printer?.connected)throw Error('请先连接打印机');await printer.fresh();if(wizardActive())throw Error('请先完成归零和装笔步骤');
    if(v.unchanged!==true)throw Error('请确认已装好这支笔，伸出长度和纸厚一致');const preset=Presets.validate(v.preset),p=preset.profile;
-   if(p.machine.model!=='a1-mini'||preset.serial&&preset.serial!==device.serial)throw Error('校准配置对应的打印机不匹配');
+   if(!matching(p)||preset.serial&&preset.serial!==device.serial)throw Error('校准配置对应的打印机不匹配');
    if(knownPosition&&((!retainedValid()&&(printer.state.home_flag&7)!==7)||!['IDLE','FINISH'].includes(printer.state.gcode_state)&&!file.cancelledIdle()))invalidatePosition('position_unknown','机器坐标待恢复；笔参数已保留');
    wizard={...flow.create(),phase:'complete',profile:{...p,name:preset.name,confirmed:true},position:knownPosition?{...knownPosition}:null,calibrationPoint:preset.calibrationPoint||{...(knownPosition||flow.PARK),z:p.downZ},returnTo:preset.returnTo||{...(knownPosition||flow.PARK)},contact:{downZ:p.downZ,upZ:p.upZ},message:knownPosition?'已使用保存的校准配置，机器没有移动':'整套校准参数已载入；恢复机器坐标后即可绘画，不需要重新测笔高'};job=null;calibration=null;remember();run={status:knownPosition?'calibrated':'position_required'};return snapshot();
   });
@@ -128,7 +134,7 @@ function createBridge(options={}){
    if(v.unchanged!==true)throw Error('请确认打印机未重启、未手推，纸笔与校准配置未改变');
    const preset=v.preset?Presets.validate(v.preset):null,ref=preset||measured();if(!ref)throw Error('请选择原校准配置');
    if(preset?.serial&&preset.serial!==device.serial)throw Error('校准配置对应的打印机不匹配');
-   const profile=M.validateProfile({...ref.profile,confirmed:true});if(profile.machine.model!=='a1-mini'||proof.position.z<profile.upZ)throw Error('完成位置与校准配置不匹配');
+   const profile=M.validateProfile({...ref.profile,confirmed:true});if(!matching(profile)||proof.position.z<profile.upZ)throw Error('完成位置与校准配置不匹配');
    printer.idle({homed:false});
    retainedPosition={serial:device.serial,homeFlag:printer.state.home_flag,filename:proof.filename,confirmedAt:Date.now()};
    knownPosition={...proof.position};positionIssue=null;job=null;
@@ -140,7 +146,7 @@ function createBridge(options={}){
   if(name==='wizard/use-preset'){
    if(busy)throw Error('动作尚未完成');await ready();if(!knownPosition)throw Error('请先归零建立本次位置，保存的坐标不能代替归零');
    if(v.unchanged!==true)throw Error('请确认是同一支笔、相同装夹和纸厚，返回路线畅通');
-   const preset=Presets.validate(v.preset);if(!preset.calibrationPoint||!preset.returnTo)throw Error('此旧配置没有校准点，请先使用配置或重新校准');if(preset.serial&&preset.serial!==device?.serial)throw Error('校准配置对应的打印机不匹配');if(preset.profile.machine.model!=='a1-mini')throw Error('预设机型不匹配');
+   const preset=Presets.validate(v.preset);if(!preset.calibrationPoint||!preset.returnTo)throw Error('此旧配置没有校准点，请先使用配置或重新校准');if(preset.serial&&preset.serial!==device?.serial)throw Error('校准配置对应的打印机不匹配');if(!matching(preset.profile))throw Error('预设机型不匹配');
    const steps=flow.refineSteps(knownPosition,preset.calibrationPoint,preset.profile.upZ);
    wizard={...flow.create(),mode:'preset',phase:'approaching',position:{...knownPosition},returnTo:preset.returnTo,profile:preset.profile,message:'正在抬笔返回预设点，最后 0.5 mm 缓慢接近'};
    return runWizard(async()=>{const done=await flow.moves(printer,wizard,steps,wizardOptions());wizard.phase=done?'adjust':'cancelled';wizard.message=done?'已到预设接触高度，检查后确认即可；需要时可上下微调':'已停止，请重新检查位置';});
@@ -174,7 +180,7 @@ function createBridge(options={}){
    if(!wizard.contact||!wizard.profile.confirmed||!Number.isFinite(v.gap)||v.gap<.5||v.gap>10)throw Error('请选择已校准的笔，抬笔间隙须为 0.5–10 mm');
    if(v.revision!==undefined&&v.revision!==(wizard.revision||0))throw Error('笔参数已变化，请刷新后重新应用间隙');
    const downZ=wizard.contact.downZ,upZ=Math.round((downZ+v.gap)*1000)/1000;
-   if(upZ>180)throw Error('抬笔高度超出机器行程');
+   if(upZ>spec().z)throw Error('抬笔高度超出机器行程');
    if(wizard.profile.downZ!==downZ||wizard.profile.upZ!==wizard.contact.upZ)throw Error('当前笔参数与已测接触高度不一致');
    const profile=M.validateProfile({...wizard.profile,upZ}),returnTo={...wizard.returnTo,z:Math.max(wizard.returnTo.z,upZ)};
    wizard={...wizard,profile,contact:{downZ,upZ},returnTo,revision:(wizard.revision||0)+1,message:'抬笔间隙已更新，接触高度不变；机器未移动，下次绘画生效'};job=null;calibration=null;remember();run={status:'calibrated',note:wizard.message};return snapshot();
@@ -199,7 +205,7 @@ function createBridge(options={}){
   if(name==='wizard/finish'){
    if(busy)throw Error('当前动作尚未完成');flow.requirePhase(wizard,v.id,['adjust']);
    await ready();const measured=cal.finish({id:wizard.id,position:wizard.position},v.id,v.lift,v.contact),profile=M.validateProfile({...v.profile,downZ:measured.downZ,upZ:measured.upZ,confirmed:true});
-   if(!M.machineMatch(profile.machine,{model:'a1-mini',w:180,h:180,plate:profile.machine.plate}))throw Error('向导目前只支持 A1 mini');
+   assertModel(profile);
    const point={...wizard.position},parkZ=Math.max(wizard.returnTo.z,measured.upZ),steps=flow.zSteps(wizard.position,parkZ);
    wizard.phase='returning';wizard.message='轻触高度已采集，正在抬笔返回安装位置';wizard.contact=null;
    return runWizard(async()=>{const completed=await flow.moves(printer,wizard,steps,wizardOptions());

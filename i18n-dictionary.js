@@ -802,5 +802,16 @@ globalThis.PenTranslations={
   "使用 ": "Using ",
   "请放回纸张和笔，让笔尖保持悬空": "Reinstall the paper and pen, keeping the tip above the paper",
   "发送整图不需要先回到待机点；软件不会重置机器坐标。": "Full upload does not require a return to standby first; software will not reset machine coordinates.",
-  "选择已保存的校准配置，笔高、笔架和绘画设置会一起应用。": "Select a saved profile to apply its pen height, mount and drawing settings together."
+  "选择已保存的校准配置，笔高、笔架和绘画设置会一起应用。": "Select a saved profile to apply its pen height, mount and drawing settings together.",
+  "自动识别": "Auto-detect",
+  "使用该机型画布": "Use this printer canvas",
+  "已完成 A1 mini 实机验证": "Tested on A1 mini hardware",
+  "兼容适配 · 尚未实机验证": "Compatibility support · not tested on hardware",
+  "绘画避开左侧 18 mm，Z 上限 250 mm": "Drawing excludes the left 18 mm; Z limit 250 mm",
+  "支持 A1 mini、A1、P1S · A1 / P1S 尚未实机验证": "Supports A1 mini, A1 and P1S · A1 / P1S not tested on hardware",
+  "画布机型与打印机不一致，请在打印机页点击“使用该机型画布”": "Canvas and printer do not match. Open Printer and choose Use this printer canvas.",
+  "此机型当前支持排版和导出，联网支持 A1 mini、A1、P1S": "Layout and export only for this model. Live control supports A1 mini, A1 and P1S.",
+  "画布与打印机机型不一致，请在打印机页点击“使用该机型画布”": "Canvas and printer do not match. Open Printer and choose Use this printer canvas.",
+  "按所选机型的运动参数估算，忽略转角、通信与笔架限制。它不是实机完成时间保证。笔迹预演按请求速度播放；文字笔顺保持。": "Estimated from the selected machine parameters, excluding corners, communication and pen-mount constraints. This does not guarantee completion time. Preview uses requested speed and preserves text stroke order.",
+  "同一作品、同一笔高与间隙，按所选机型的运动参数估算；忽略转角和通信。": "Same artwork, contact height and clearance. Estimated for the selected printer, excluding corners and communication."
 };

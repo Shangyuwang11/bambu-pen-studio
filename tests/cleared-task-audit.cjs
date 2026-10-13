@@ -4,7 +4,7 @@ const Policy=require('../bridge/printer-policy.cjs'),{Printer}=require('../bridg
 const checks=[],serial='TESTSERIAL00',filename='a1pen_1234567890abcdef12345678.gcode.3mf';
 const observed={gcode_state:'FAILED',gcode_file:'',subtask_name:'',stg_cur:255,print_error:0,hms:[],home_flag:578635152,spd_mag:100,sdcard:true,nozzle_temper:28.5,bed_temper:28.3,nozzle_target_temper:0,bed_target_temper:0,mc_percent:0,mc_remaining_time:40};
 class Fake extends EventEmitter{
- constructor(){super();this.connected=true;this.full=true;this.ageMs=0;this.state={...observed};this.commands=[];this.version=[{name:'esp32',hw_ver:'AP05'}];}
+ constructor(){super();this.connected=true;this.full=true;this.ageMs=0;this.state={...observed};this.commands=[];this.version=[{name:'esp32',hw_ver:'AP05',project_name:'N1'}];}
  async connect(){}async fresh(){return this.snapshot();}close(){this.connected=false;}
  snapshot(){return{connected:this.connected,full:this.full,ageMs:this.ageMs,state:{...this.state}};}
  idle(o){return Printer.prototype.idle.call(this,o);}report(s){Object.assign(this.state,s);this.emit('update');}

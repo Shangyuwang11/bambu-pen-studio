@@ -1,4 +1,5 @@
 'use strict';
+const Models=require('../printer-models.js');
 const {Ftps}=require('./ftps.cjs'),Package=require('./file-package.cjs'),Policy=require('./printer-policy.cjs');
 const terminal=new Set(['complete','stopped','failed','dismissed','foreign']);
 function createFileSession({load=()=>null,save=()=>{},ftpFactory=options=>new Ftps(options),onComplete=()=>{},onStopped=()=>{},now=Date.now}={}){
@@ -62,10 +63,10 @@ function createFileSession({load=()=>null,save=()=>{},ftpFactory=options=>new Ft
   else if(['starting','disconnected'].includes(record.phase)&&record.startSentAt&&now()-record.startSentAt>=60000){record={...record,phase:'start_uncertain',message:'文件已上传，但打印机未确认执行。校准配置保留；请核对机器状态，不会自动重发'};continuous=false;persist();}
  }
  function lost(){continuous=false;cancelledTask=null;if(active()){record={...record,connected:false,phase:'disconnected',message:'连接已断开；完整文件已在打印机上，不会自动重发'};persist();}}
- function attach(p,sn){if(printer){printer.off('update',observe);printer.off('failure',lost);}printer=p;serial=sn;continuous=false;cancelledTask=null;cancellationRejected=false;if(record&&record.serial!==serial){record=null;persist();}printer.cancelledTaskIsIdle=()=>cancelledIdle();printer.on('update',observe);printer.on('failure',lost);observe();}
+ function attach(p,sn){if(printer){printer.off('update',observe);printer.off('failure',lost);}printer=p;serial=sn;continuous=false;cancelledTask=null;cancellationRejected=false;if(record&&(record.serial!==serial||(record.model||'a1-mini')!==(p.model||'a1-mini'))){record=null;persist();}printer.cancelledTaskIsIdle=()=>cancelledIdle();printer.on('update',observe);printer.on('failure',lost);observe();}
  async function start(job,code,beforeStart=()=>{},{cancelled=()=>false,allowUnhomed=false}={}){
-  if(active())throw Error('已有完整文件任务尚未结束');const taskSerial=serial;await printer.fresh();if(serial!==taskSerial)throw Error('打印机已变化，没有启动文件任务');printer.idle({homed:!(allowUnhomed&&job.fileOnly===true),operation:'file'});if(printer.state.sdcard!==true)throw Error('独立绘画需要打印机中有可用的存储卡');
-  const pack=Package.build(job);record={version:1,filename:pack.filename,serial,phase:'uploading',connected:true,percent:0,sha256:pack.sha256,createdAt:now(),start:job.start,end:job.end,estimateSeconds:job.estimateSeconds,requestedSpeed:2,positionSource:job.positionSource||'observed',speedMode:job.state?.pen?.speedMode||'normal'};persist();
+  if(active())throw Error('已有完整文件任务尚未结束');if(job.state.machine.model!==(printer?.model||'a1-mini'))throw Error('任务机型与打印机不匹配');const taskSerial=serial;await printer.fresh();if(serial!==taskSerial)throw Error('打印机已变化，没有启动文件任务');printer.idle({homed:!(allowUnhomed&&job.fileOnly===true),operation:'file'});if(printer.state.sdcard!==true)throw Error('独立绘画需要打印机中有可用的存储卡');
+  const pack=Package.build(job);record={version:1,model:job.state.machine.model,filename:pack.filename,serial,phase:'uploading',connected:true,percent:0,sha256:pack.sha256,createdAt:now(),start:job.start,end:job.end,estimateSeconds:job.estimateSeconds,requestedSpeed:2,positionSource:job.positionSource||'observed',speedMode:job.state?.pen?.speedMode||'normal'};persist();
   const abort=()=>{if(record?.filename!==pack.filename||record?.serial!==taskSerial||serial!==taskSerial)throw Error('文件任务已变化，没有启动旧文件');if(!record.cancelStartRequested&&!cancelled())return false;record={...record,phase:'stopped',cancelStartRequested:true,uploadCancelled:true,message:'已取消文件启动；没有发送绘画任务，机器位置保留'};continuous=false;persist();return true;};
   if(abort())return snapshot();
   const ftp=ftpFactory(printer.options);let sent;
@@ -83,7 +84,7 @@ function createFileSession({load=()=>null,save=()=>{},ftpFactory=options=>new Ft
   const s=printer?.state||{},name=(s.gcode_file||'').split(/[\\/]/).at(-1);
   if(!printer?.connected||!record?.completionConfirmed||record.completionInvalidated||!Number.isInteger(s.home_flag)||record.phase!=='complete'||record.serial!==serial||s.gcode_state!=='FINISH'||s.mc_percent!==100||s.print_error!==0||!Array.isArray(s.hms)||Policy.blockingHms(s).length)return null;
   if(name?name!==record.filename:s.subtask_name? s.subtask_name!==record.filename:!continuous)return null;
-  if(!record.end||!['x','y','z'].every(k=>Number.isFinite(record.end[k])&&record.end[k]>=0&&record.end[k]<=180))return null;
+  try{Models.point(record.end,record.model||'a1-mini');}catch{return null;}
   return{filename:record.filename,serial,position:{...record.end},completedAt:record.completedAt};
  }
  function stoppedReference(){

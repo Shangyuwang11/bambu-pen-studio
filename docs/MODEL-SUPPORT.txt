@@ -1,0 +1,53 @@
+Bambu Pen 0.22.0 — machine support
+
+Model      Project ID   Hardware  XY travel    Z limit   Pen lift cap
+A1 mini    N1           AP05      180 x 180    180 mm    30 mm/s
+A1         N2S          AP05      256 x 256    256 mm    30 mm/s
+P1S        C12          AP04      256 x 256    250 mm    20 mm/s
+
+A1 mini has been used on physical hardware in this project's development.
+A1 and P1S have code and simulated workflow coverage only; physical homing,
+firmware acceptance of drawing files, holder clearance and ink quality remain
+unverified. Other models (P1P, X1, etc.) are not enabled for live control.
+
+P1S: the stock profile excludes the front-left 18 x 28 mm cutter area.
+This release conservatively restricts the entire drawing corridor to nozzle
+X >= 18 mm so straight pen-up moves cannot cross that corner. The display and
+path clipping also include the measured pen offset. The 256 x 256 plate shape
+does not imply the pen can draw on every part of it. Default mount distance
+37.5 mm is editable and must be measured for each actual holder.
+
+Connection identifies project_name from the controller/OTA modules. AP05 alone
+cannot distinguish A1 from A1 mini. When older firmware omits project_name,
+select the actual model in Printer; its controller family must still match.
+A reported model cannot be overridden with a contradictory manual selection.
+Saved pairing retains the selected/resolved model for automatic reconnect.
+
+The Printer page offers Use this printer canvas when the design differs.
+Artwork and paper remain in place. Saved calibration profiles are retained;
+choose or create one for this printer and holder. One printer's profile cannot
+be used to issue motion on another model. Existing A1 mini records remain valid.
+
+Calibration, manual Z adjustment, streamed paths, return positions, live tuning,
+position receipts and full-file containers use the selected model's envelope.
+Full uploads contain model-specific settings and N1/N2S/C12 slice metadata.
+Automatic bed leveling, heating, extrusion and ordinary slicer startup/end
+templates are not inserted into drawing files. Explicit bare-nozzle homing
+remains part of the calibration wizard. Printer developer/LAN permissions are
+still required by firmware; this adaptation does not bypass authentication.
+
+Sources, pinned on 2026-10-13:
+https://github.com/bambulab/BambuStudio/tree/47a13eeb1d9af65ef2371e361c856e21d4f6ca72/resources/printers
+https://github.com/bambulab/BambuStudio/tree/47a13eeb1d9af65ef2371e361c856e21d4f6ca72/resources/profiles/BBL/machine
+Plate protocol mapping (hot_plate for smooth PEI, textured_plate for textured):
+https://github.com/bambulab/BambuStudio/blob/47a13eeb1d9af65ef2371e361c856e21d4f6ca72/src/libslic3r/PrintConfig.hpp
+https://github.com/greghesp/ha-bambulab/issues/495
+https://github.com/greghesp/ha-bambulab/issues/1500
+
+中文说明
+本版开放 A1、P1S 的连接、校准、分段与整图任务，为实验性适配。
+测试使用模拟打印机，不代表 A1 / P1S 实机已经验证。机型、校准高度、
+返回点、任务包和抬笔速度分别处理，不再沿用 A1 mini 的 180 mm 限制。
+AP05 同时用于 A1 和 A1 mini，因此需读取具体型号；识别不完整时请在
+连接页手动选实际机型。保存后会记住，不会清空已有作品或校准配置。
+P1S 按官方默认配置使用 250 mm Z 上限，并保守避开左侧 18 mm 绘画区域。

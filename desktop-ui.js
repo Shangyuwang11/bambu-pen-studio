@@ -10,8 +10,8 @@
   if(p){for(const [id,value] of [['lanIP',p.ip],['lanSerial',p.serial]])if(!$(id).value&&document.activeElement!==$(id))$(id).value=value;
    $('lanCode').placeholder='访问码已保存，无需重填';$('lanConnect').textContent='连接 / 重试';
    const state=printerConnected?'已连接':a.connecting?'正在自动连接…':a.phase==='credential_error'?'保存的访问码读取失败，请重新填写一次':`等待打印机上线，${Math.max(0,Math.ceil(((a.retryAt||Date.now())-Date.now())/1000))}秒后自动重试`;
-   pairNote.textContent=`已保存 ${p.model} · ${p.ip} · ${p.serial} · ${state}`+(m.connectError&&!printerConnected?'。上次连接：'+m.connectError:'');
-   if(!printerConnected)$('connectionBadge').textContent=a.userEnabled===false?'A1 mini 已断开':m.autoConnect?.connecting?'A1 mini 连接中':'A1 mini 等待上线';
+   pairNote.textContent=`已保存 ${PenPrinterModels.specs[p.model]?.name||'Bambu Lab'} · ${p.ip} · ${p.serial} · ${state}`+(m.connectError&&!printerConnected?'。上次连接：'+m.connectError:'');
+   if(!printerConnected)$('connectionBadge').textContent=(PenPrinterModels.specs[p.model]?.name||'Bambu Lab')+(a.userEnabled===false?' 已断开':m.autoConnect?.connecting?' 连接中':' 等待上线');
   }else{pairNote.textContent=m.paired?'连接资料未能读取，请重新填写连接信息。':'尚未保存打印机，首次填写后会自动记住。';$('lanCode').placeholder='8位局域网访问码';}
  }catch(e){pairNote.textContent='读取连接资料失败：'+e.message;}}
  window.addEventListener('penconnection',e=>{printerConnected=e.detail.printer?.connected===true;pairing();});pairing();setInterval(pairing,3000);save();

@@ -3,18 +3,18 @@
 // Keep one bounded G-code packet in flight, with its receipt IN that packet.
 const MAX_BYTES=1800, RECEIPT_RESERVE=32, active=new WeakSet(), verified=new WeakSet();
 const receiptModes=new WeakMap(),remainingMarkers=new WeakMap();
-const randomInt=require('node:crypto').randomInt;
+const randomInt=require('node:crypto').randomInt,Models=require('../printer-models.js');
 // Two immediately adjacent planner drains prove the same boundary. Keep every
 // drain separated by any other command, especially all Z/XY transitions.
 function compactFences(code){const lines=[];for(const line of code.split(/\r?\n/)){if(/^\s*M400\s*$/.test(line)&&/^\s*M400\s*$/.test(lines.at(-1)||''))continue;lines.push(line);}return lines.join('\n');}
-function endpoint(code,start){
- const p={...start};for(const k of ['x','y','z'])if(!Number.isFinite(p[k])||p[k]<0||p[k]>180)throw Error('数据包起点未确认');
+function endpoint(code,start,model){
+ const p=Models.point(start,model);
  for(const line of code.trim().split(/\r?\n/)){
   if(/^\s*G(?!1\s|21\s*$|90\s*$)/.test(line))throw Error('绘画数据包只能使用毫米和绝对直线坐标');
   if(!/^G1\s/.test(line))continue;
   if(!/^G1(?:\s+[XYZF]-?\d+(?:\.\d+)?)+$/.test(line))throw Error('绘画数据包坐标无法确认');
   for(const k of ['X','Y','Z']){const matches=[...line.matchAll(new RegExp('\\b'+k+'(-?\\d+(?:\\.\\d+)?)','g'))];if(matches.length>1)throw Error('绘画数据包有重复坐标');if(matches[0])p[k.toLowerCase()]=Number(matches[0][1]);}
-  if(Object.values(p).some(n=>!Number.isFinite(n)||n<0||n>180))throw Error('数据包终点超出行程');
+  Models.point(p,model);
  }
  return p;
 }
@@ -107,12 +107,15 @@ async function run(printer,code,seconds,{homed=true,thermal='cold',timeoutMs,sta
  try{
   // Retain all internal Z/XY fences. Only replace the final completion fence.
   const lines=compactFences(code).trim().split(/\r?\n/);while(lines.length&&/^\s*M400\s*$/.test(lines.at(-1)))lines.pop();
+  // Check the entire command before publishing any packet, including homing
+  // follow-up moves whose initial XYZ is not yet known to this process.
+  endpoint(lines.filter(line=>/^G1\s/.test(line)).join('\n'),startPosition||{x:0,y:0,z:0},printer.model);
   const parts=(compact?transportPackets:packets)(lines.join('\n'),MAX_BYTES-RECEIPT_RESERVE);if(!parts.length)parts.push('');trace.totalPackets=parts.length;
   trace.canonicalBytes=Buffer.byteLength(lines.join('\n'));trace.transportBytes=parts.reduce((n,p)=>n+Buffer.byteLength(p),0);
-  let receipt,position=startPosition?endpoint('',startPosition):null,stopped=false;
+  let receipt,position=startPosition?endpoint('',startPosition,printer.model):null,stopped=false;
   for(let i=0;i<parts.length;i++){
    if(startPosition&&cancelled()){stopped=true;break;}
-   const end=position?endpoint(parts[i],position):null;
+   const end=position?endpoint(parts[i],position,printer.model):null;
    const detail={index:i+1,total:parts.length,reports:0};trace.packets.push(detail);if(trace.packets.length>16)trace.packets.shift();
    receipt=await packetRun(printer,parts[i],seconds,{homed,timeoutMs,thermal,receiptField},detail);trace.completedPackets++;
    if(end){position=end;onPacket({index:i+1,total:parts.length,position:{...position},acknowledgement:receipt.acknowledgement,completion:receipt.completion});}

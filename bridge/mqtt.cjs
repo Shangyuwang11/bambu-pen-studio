@@ -85,7 +85,7 @@ class Printer extends EventEmitter {
   if(type!==3)return;
   if(b.length<2)throw Error('Malformed MQTT message');const n=b.readUInt16BE(0);let p=n+2;if(p>b.length)throw Error('Invalid topic');const topic=b.subarray(2,p).toString();if(((h>>1)&3)===1){if(p+2>b.length)throw Error('Missing packet id');this.socket.write(packet(0x40,b.subarray(p,p+2)));p+=2;}else if((h>>1)&3)throw Error('Unexpected MQTT QoS');
   if(topic!=='device/'+this.options.servername+'/report')return;const j=JSON.parse(b.subarray(p).toString());
-  if(j.info?.command==='get_version')this.version=(j.info.module||[]).map(m=>({name:m.name,sw_ver:m.sw_ver,hw_ver:m.hw_ver}));
+  if(j.info?.command==='get_version')this.version=(j.info.module||[]).map(m=>({name:m.name,sw_ver:m.sw_ver,hw_ver:m.hw_ver,project_name:m.project_name}));
   if(j.print?.command==='push_status'){
    const v=j.print,now=Date.now(),revision=++this.statusRevision;for(const k of KEYS)if(Object.hasOwn(v,k)){this.state[k]=v[k];this.fieldRevision[k]=revision;this.fieldTime[k]=now;}if(Array.isArray(v.hms)){this.state.hms=v.hms.map(x=>({attr:x.attr,code:x.code}));this.fieldRevision.hms=revision;this.fieldTime.hms=now;}if(v.msg===0)this.full=true;this.lastStatus=now;
   }

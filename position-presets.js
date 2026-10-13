@@ -1,5 +1,5 @@
 (function(root){'use strict';
- const M=root.PenMachine||(typeof require==='function'?require('./machine.js'):null),icons=['pen','pencil','marker','brush'],point=p=>{const r={};for(const k of ['x','y','z']){if(!Number.isFinite(p?.[k])||p[k]<0||p[k]>180)throw Error('预设坐标无效');r[k]=p[k];}return r;};
+ const M=root.PenMachine||(typeof require==='function'?require('./machine.js'):null),icons=['pen','pencil','marker','brush'],Models=root.PenPrinterModels||(typeof require==='function'?require('./printer-models.js'):null),point=(p,model)=>Models.point(p,model);
  function name(v){const n=String(v??'').trim();if(!n||n.length>48)throw Error('请填写 1–48 个字的校准配置名称');return n;}
  function penSettings(v){
   if(v==null)return null;if(typeof v!=='object'||Array.isArray(v))throw Error('配置中的绘画参数无效');
@@ -10,8 +10,8 @@
  function validate(v){
   if(!v||typeof v.id!=='string'||!/^preset_[a-z0-9_-]{1,60}$/.test(v.id))throw Error('预设标识无效');
   const profile=M.validateProfile(v.profile),modern=v.version===2;
-  if(!Number.isFinite(profile.downZ)||!Number.isFinite(profile.upZ)||profile.downZ<0||profile.upZ>180||profile.upZ-profile.downZ<.5-1e-7)throw Error('请先校准笔的接触高度');
-  const calibrationPoint=modern&&v.calibrationPoint==null?null:point(v.calibrationPoint),returnTo=modern&&v.returnTo==null?null:point(v.returnTo),position=modern&&v.position==null?null:point(v.position);
+  if(!Number.isFinite(profile.downZ)||!Number.isFinite(profile.upZ)||profile.downZ<0||profile.upZ>Models.get(profile.machine.model).z||profile.upZ-profile.downZ<.5-1e-7)throw Error('请先校准笔的接触高度');
+  const calibrationPoint=modern&&v.calibrationPoint==null?null:point(v.calibrationPoint,profile.machine.model),returnTo=modern&&v.returnTo==null?null:point(v.returnTo,profile.machine.model),position=modern&&v.position==null?null:point(v.position,profile.machine.model);
   if(calibrationPoint&&Math.abs(calibrationPoint.z-profile.downZ)>.001||returnTo&&returnTo.z<profile.upZ)throw Error('预设高度与校准点不一致');
   if(v.serial!=null&&!/^[A-Za-z0-9]{10,30}$/.test(v.serial))throw Error('校准配置的打印机身份无效');
   return{version:2,id:v.id,name:name(v.name||'校准配置'),icon:icons.includes(v.icon)?v.icon:'pen',serial:v.serial||null,profile:{...profile,name:name(v.name||'校准配置'),confirmed:false},penSettings:penSettings(v.penSettings),position,calibrationPoint,returnTo,savedAt:Number.isFinite(v.savedAt)?v.savedAt:0};

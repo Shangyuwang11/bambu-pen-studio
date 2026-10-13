@@ -27,3 +27,10 @@ The format of the Font data in this distribution was originally created by James
 ## 研究中查阅但未使用的数据
 
 Chinese Hershey / Source Han Sans 在调研中评估过，但第一版没有打包或使用其字体路径。应用自有几何、界面、导入与导出逻辑独立实现。
+
+## 机型配置数据 / Machine settings
+
+`drawing-machine-settings.json` contains selected machine parameters from Bambu Studio, revision `47a13eeb1d9af65ef2371e361c856e21d4f6ca72`: `fdm_machine_common.json`, `fdm_bbl_3dp_001_common.json`, `Bambu Lab A1 0.4 nozzle.json`, and `Bambu Lab P1S 0.4 nozzle.json` under `resources/profiles/BBL/machine`. Extracted on 2026-10-13. Machine metadata is retained; startup/end G-code templates are excluded. The existing A1 mini complete settings remain the base container for the drawing task.
+
+Source: https://github.com/bambulab/BambuStudio/tree/47a13eeb1d9af65ef2371e361c856e21d4f6ca72/resources/profiles/BBL/machine
+License: GNU AGPL v3; bundled in [plates/AGPL-3.0.txt](plates/AGPL-3.0.txt). Data is replaceable independently of application code.

@@ -18,6 +18,6 @@
  // Keep the action panel anchored; scroll configuration without hiding Send.
  const categories=[['#paperFold','paper'],['#penLibraryFold','pen'],['#mountPositionFold','ruler']];for(const[selector,icon]of categories){const heading=document.querySelector(selector+' > summary');heading?.classList.add('release-fold-title');}
  const language=document.createElement('select');language.id='appLanguage';language.setAttribute('aria-label','界面语言');language.title='界面语言 / Interface language';language.innerHTML='<option value="zh-CN">简体中文</option><option value="en">English</option>';language.value=PenI18n.language;language.onchange=()=>PenI18n.setLanguage(language.value);document.querySelector('.header-actions').prepend(language);window.addEventListener('penlanguagechange',()=>{language.value=PenI18n.language;close();window.dispatchEvent(new Event('resize'));});
- const info=document.createElement('p');info.className='release-support';info.textContent='实机支持 A1 mini · A1 / P1S 可排版和导出';$('deviceFormNote').after(info);
+ const info=document.createElement('p');info.className='release-support';info.textContent='支持 A1 mini、A1、P1S · A1 / P1S 尚未实机验证';$('deviceFormNote').after(info);
  window.PenReleaseUI={closeContext:close};
 })();

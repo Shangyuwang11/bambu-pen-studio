@@ -1,10 +1,10 @@
 'use strict';
-const M=require('../machine.js'),cal=require('./calibration.cjs');
+const M=require('../machine.js'),cal=require('./calibration.cjs'),Models=require('../printer-models.js');
 function validate(v){
  if(v?.version!==1||!/^[A-Za-z0-9]{10,30}$/.test(v.serial))throw Error('笔高参考无效');
- const profile=M.validateProfile(v.profile),calibrationPoint=cal.position(v.calibrationPoint);
- if(profile.machine.model!=='a1-mini'||!profile.confirmed||!Number.isFinite(profile.downZ)||!Number.isFinite(profile.upZ)||profile.downZ<0||profile.upZ>180||profile.upZ-profile.downZ<.5||Math.abs(calibrationPoint.z-profile.downZ)>.001)throw Error('笔高参考不完整');
- return{version:1,serial:v.serial,profile,calibrationPoint,...(v.returnTo?{returnTo:cal.position(v.returnTo)}:{})};
+ const profile=M.validateProfile(v.profile),calibrationPoint=cal.position(v.calibrationPoint,profile.machine.model);
+ if(!Models.supported(profile.machine.model)||!profile.confirmed||!Number.isFinite(profile.downZ)||!Number.isFinite(profile.upZ)||profile.downZ<0||profile.upZ>Models.get(profile.machine.model).z||profile.upZ-profile.downZ<.5||Math.abs(calibrationPoint.z-profile.downZ)>.001)throw Error('笔高参考不完整');
+ return{version:1,serial:v.serial,profile,calibrationPoint,...(v.returnTo?{returnTo:cal.position(v.returnTo,profile.machine.model)}:{})};
 }
 // A saved contact plane is a reference, never proof of the machine's current XYZ.
 function createMemory({load=()=>null,save=()=>{}}={}){

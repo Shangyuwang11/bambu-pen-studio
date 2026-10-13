@@ -42,7 +42,7 @@
  // time. This analysis never changes the actual trajectory or its fences.
  function restTime(length,speed,acceleration){if(![length,speed,acceleration].every(Number.isFinite)||length<0||speed<=0||acceleration<=0)throw Error('运动估算参数无效');if(length===0)return{seconds:0,peak:0};const peak=Math.min(speed,Math.sqrt(length*acceleration));return{seconds:length>=speed*speed/acceleration?length/speed+speed/acceleration:2*Math.sqrt(length/acceleration),peak};}
  function efficiency(model){
-  const settings=model?.settings||{},Policy=root.PenSpeedPolicy||(typeof require==='function'?require('./speed-policy.js'):null),cap=Policy.limits(settings),moves=model?.moves||[],breakdown={draw:0,travel:0,z:0,return:0},groups=[];let current=null;
+  const settings=model?.settings||{},Policy=root.PenSpeedPolicy||(typeof require==='function'?require('./speed-policy.js'):null),cap=Policy.limits(settings,settings.machine),moves=model?.moves||[],breakdown={draw:0,travel:0,z:0,return:0},groups=[];let current=null;
   for(const move of moves){
    const length=Math.hypot(...keys.map(k=>move.end[k]-move.from[k]));
    if(move.kind==='draw'&&move.phase==='plot'&&current?.kind==='draw'&&current.stroke===move.stroke){current.length+=length;current.speed=Math.max(current.speed,move.speed);continue;}
@@ -51,7 +51,7 @@
   let bestCaseSeconds=0,shortStrokeCount=0,maxSpeedStrokeCount=0,attainablePeak=0;
   for(const group of groups){const z=['up','down'].includes(group.kind),value=restTime(group.length,group.speed,z?cap.zAcceleration:cap.xyAcceleration),category=group.phase!=='plot'?'return':group.kind==='draw'?'draw':group.kind==='travel'?'travel':'z';bestCaseSeconds+=value.seconds;breakdown[category]+=value.seconds;if(group.kind==='draw'&&group.phase==='plot'){attainablePeak=Math.max(attainablePeak,value.peak);if(value.peak<group.speed-.000001)shortStrokeCount++;else maxSpeedStrokeCount++;}}
   const strokes=new Set(moves.filter(m=>m.kind==='down'&&m.phase==='plot').map(m=>m.stroke)).size,critical=Object.keys(breakdown).reduce((a,b)=>breakdown[b]>breakdown[a]?b:a,'draw');
-  return{nominalSeconds:model?.duration||0,bestCaseSeconds,breakdown,strokes,liftGap:Number.isFinite(settings.upZ)&&Number.isFinite(settings.downZ)?round(settings.upZ-settings.downZ):null,shortStrokeCount,maxSpeedStrokeCount,attainablePeak,critical,assumptions:{referenceMachine:'a1-mini',xyAcceleration:cap.xyAcceleration,zAcceleration:cap.zAcceleration,cornering:false,communication:false,kind:'published-cap-lower-bound'}};
+  return{nominalSeconds:model?.duration||0,bestCaseSeconds,breakdown,strokes,liftGap:Number.isFinite(settings.upZ)&&Number.isFinite(settings.downZ)?round(settings.upZ-settings.downZ):null,shortStrokeCount,maxSpeedStrokeCount,attainablePeak,critical,assumptions:{referenceMachine:settings.machine?.model||'a1-mini',xyAcceleration:cap.xyAcceleration,zAcceleration:cap.zAcceleration,cornering:false,communication:false,kind:'published-cap-lower-bound'}};
  }
  // Isolate every Z movement from XY in the firmware planner. These are local
  // completion fences, not timed dwells or one network round trip per stroke.
@@ -63,11 +63,11 @@
   let data,mode,reason,boardPoint,activeProfile=null;
   if(r&&!r.errors.length&&r.paths.length){
    const p=r.profile,known=profile.confirmed&&position&&keys.every(k=>Number.isFinite(position[k]))&&position.z>=p.downZ;
-   data=build(r.paths,{...state.pen,downZ:p.downZ,upZ:p.upZ,zSpeed:p.zSpeed,liftSpeed:p.liftSpeed},known?position:r.start,known?(park||position):r.start);
+   data=build(r.paths,{...state.pen,machine:state.machine,downZ:p.downZ,upZ:p.upZ,zSpeed:p.zSpeed,liftSpeed:p.liftSpeed},known?position:r.start,known?(park||position):r.start);
    mode=known?'machine':'parameters';reason=known?'机器路径预演 · 与发送共用路径、速度和归位模型':'参数预演 · 起点暂设在首笔上方，校准后显示完整进出场';boardPoint=pnt=>[...inverse(pnt.x,pnt.y,p),round(pnt.z-p.downZ)];activeProfile=p;
   }else{
    const zSpeed=Number.isFinite(profile?.zSpeed)&&profile.zSpeed>=.1&&profile.zSpeed<=15?profile.zSpeed:5,liftSpeed=Number.isFinite(profile?.liftSpeed)&&profile.liftSpeed>=.1&&profile.liftSpeed<=30?profile.liftSpeed:zSpeed,first=design.paths[0]?.points[0]||[state.paper.x,state.paper.y];
-   data=build(design.paths,{...state.pen,downZ:0,upZ:state.pen.lift,zSpeed,liftSpeed},{x:first[0],y:first[1],z:state.pen.lift});mode='design';reason='设计预演 · 尚未具备有效机器参数，不代表实机位置';boardPoint=pnt=>[pnt.x,pnt.y,pnt.z];
+   data=build(design.paths,{...state.pen,machine:state.machine,downZ:0,upZ:state.pen.lift,zSpeed,liftSpeed},{x:first[0],y:first[1],z:state.pen.lift});mode='design';reason='设计预演 · 尚未具备有效机器参数，不代表实机位置';boardPoint=pnt=>[pnt.x,pnt.y,pnt.z];
   }
   const segments=data.moves.map(m=>({...m,a:boardPoint(m.from),b:boardPoint(m.end),duration:m.seconds,...(design.paths[m.stroke]?.render?{render:design.paths[m.stroke].render}:{})}));
   return {...data,segments,mode,reason,profile:activeProfile,reachable:reachable(profile,state.machine),boardStart:boardPoint(data.start),errors:r?.errors||design.errors};

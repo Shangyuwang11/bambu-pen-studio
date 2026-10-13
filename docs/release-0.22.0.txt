@@ -1,0 +1,19 @@
+Bambu Pen 0.22.0
+
+- Added experimental A1 and P1S support for LAN pairing, calibration, streamed drawing and complete-file upload.
+- Detects N1 / N2S / C12 instead of treating the shared AP05 controller as A1 mini. Older firmware can use an explicit model selection.
+- Model-specific travel limits, return points, lift speeds and full-file settings. P1S uses Z <= 250 mm and conservatively excludes the left 18 mm drawing corridor.
+- Printer page shows the actual machine and can switch the canvas to match. Mismatched calibration or artwork cannot command another model.
+- Fixed remaining A1-mini-only interface messages and saved the resolved model for automatic reconnect.
+- Existing printer credentials, artwork, settings and calibration profiles stay in the same local data directory.
+
+A1 and P1S have passed code and simulated workflow tests, including UI checks. They have not been tested on physical hardware. Windows 10/11 x64. No personal credentials or projects are bundled.
+
+中文
+- 增加 A1、P1S 实验性适配：局域网连接、校准、分段绘画和整图上传。
+- 正确区分共用 AP05 的 A1 与 A1 mini；旧固件可手动选择实际机型。
+- 按机型处理坐标范围、返回点、抬笔速度和完整任务包，修复仍写死 180 mm 的限制。
+- 打印机页显示实际型号，并提供「使用该机型画布」。错误机型的校准配置不能发送运动。
+- 保留原连接资料、作品和校准配置；公开安装包不含任何私人数据。
+
+A1 / P1S 已通过代码与模拟流程测试，尚未实机验证。

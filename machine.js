@@ -5,6 +5,7 @@
   const C=root.PenCore||(typeof require==='function'?require('./core.js'):null), finite=Number.isFinite, clone=v=>JSON.parse(JSON.stringify(v));
   // Same cooling-fan off commands used by the official A1 mini templates.
   const fanOffCommands=Object.freeze(['M106 S0','M106 P2 S0','M106 P3 S0']);
+  const Models=root.PenPrinterModels||(typeof require==='function'?require('./printer-models.js'):null);
   const numeric=['refX','refY','machineX','machineY','downZ','upZ','zSpeed'];
   function defaults(state){const p={format:'a1-pen-machine-profile',version:1,name:'校准配置',material:'卡纸',machine:clone(state.machine),refX:state.paper.x,refY:state.paper.y,machineX:null,machineY:null,xSign:null,ySign:null,downZ:null,upZ:null,zSpeed:5,liftSpeed:20,confirmed:false};return state.machine.model==='custom'?p:fromFrontMount(p,37.5,0);}
   function validateProfile(v){
@@ -39,7 +40,8 @@
   function reachable(input,machine){
     let p;try{p=validateProfile(input);}catch{return null;}
     if(!machineMatch(p.machine,machine)||!['refX','refY','machineX','machineY','xSign','ySign'].every(k=>finite(p[k]))||!p.xSign||!p.ySign)return null;
-    const a=[p.refX-p.machineX/p.xSign,p.refY-p.machineY/p.ySign],b=[p.refX+(machine.w-p.machineX)/p.xSign,p.refY+(machine.h-p.machineY)/p.ySign];
+    const minimum=Models.specs[machine.model]?.minDrawX||0;
+    const a=[p.refX+(minimum-p.machineX)/p.xSign,p.refY-p.machineY/p.ySign],b=[p.refX+(machine.w-p.machineX)/p.xSign,p.refY+(machine.h-p.machineY)/p.ySign];
     const x=Math.max(0,Math.min(a[0],b[0])),y=Math.max(0,Math.min(a[1],b[1]));
     return {x,y,w:Math.max(0,Math.min(machine.w,Math.max(a[0],b[0]))-x),h:Math.max(0,Math.min(machine.h,Math.max(a[1],b[1]))-y)};
   }
@@ -55,16 +57,16 @@
     if(area&&design.paths.some(s=>s.points.some(([x,y])=>x<area.x+radius-1e-6||x>area.x+area.w-radius+1e-6||y<area.y+radius-1e-6||y>area.y+area.h-radius+1e-6)))design=C.plan(state,{timeline:false,clipRect:area});
     errors.push(...design.errors);
     if(!machineMatch(p.machine,state.machine))errors.push('当前机型、画板尺寸或板面与笔架参数不一致，请重新核对');
-    if(!['a1-mini','a1'].includes(state.machine.model))errors.push('此机型目前支持排版与 SVG / 路径导出，尚未适配机器指令与校准');
+    if(!Models.supported(state.machine.model))errors.push('此机型目前支持排版与 SVG / 路径导出，尚未适配机器指令与校准');
     const labels={refX:'参考点画板 X',refY:'参考点画板 Y',machineX:'参考点喷嘴 X',machineY:'参考点喷嘴 Y',xSign:'X 方向',ySign:'Y 方向',downZ:'落笔 Z',upZ:'抬笔 Z',zSpeed:'落笔速度'};
     for(const [k,label] of Object.entries(labels))if(p[k]===null)errors.push('请填写或选择：'+label);
-    const maxZ=state.machine.model==='a1'?256:180;
+    const spec=Models.specs[state.machine.model],maxZ=spec?.z||180;
     if(p.refX!==null&&(p.refX<0||p.refX>state.machine.w)||p.refY!==null&&(p.refY<0||p.refY>state.machine.h))errors.push('参考点必须位于设计画板内');
     if(p.machineX!==null&&(p.machineX<0||p.machineX>state.machine.w)||p.machineY!==null&&(p.machineY<0||p.machineY>state.machine.h))errors.push('实测参考点喷嘴坐标超出所选机型范围');
     if(p.downZ!==null&&(p.downZ<0||p.downZ>maxZ)||p.upZ!==null&&(p.upZ<0||p.upZ>maxZ))errors.push('Z 高度超出所选机型范围');
     if(p.downZ!==null&&p.upZ!==null&&C.round(p.upZ)-C.round(p.downZ)<.5-1e-7)errors.push('抬笔 Z 至少比落笔 Z 高 0.5 mm');
     if(p.zSpeed!==null&&(p.zSpeed<.1||p.zSpeed>15))errors.push('落笔速度须在 0.1–15 mm/s 之间');
-    if(p.liftSpeed===null||p.liftSpeed<.1||p.liftSpeed>30)errors.push('抬笔速度须在 0.1–30 mm/s 之间');
+    if(p.liftSpeed===null||p.liftSpeed<.1||p.liftSpeed>(spec?.lift||30))errors.push('抬笔速度须在 0.1–'+(spec?.lift||30)+' mm/s 之间');
     if(errors.length)return {errors:[...new Set(errors)],paths:[],design,profile:p};
     // Check the exact rounded coordinates that will be serialized.
     const paths=design.paths.map(s=>({id:s.id,color:s.color,type:s.type,points:s.points.map(v=>map(v,p).map(C.round))}));

@@ -1,5 +1,5 @@
 'use strict';
-const crypto=require('node:crypto');
+const crypto=require('node:crypto'),Models=require('../printer-models.js');
 const motion=require('./motion.cjs');
 const flow=require('./wizard.cjs'),T=require('../trajectory.js'),Speed=require('../speed-policy.js');
 const MAX_SECONDS=12,MAX_BYTES=motion.MAX_BYTES;
@@ -13,12 +13,12 @@ function prepare(state,profile,position,returnTo){
  // The document was just validated above. Reuse it for geometry generation
  // instead of validating and copying up to 500,000 points a second time.
  const plan=M.projectDesign(state,profile,C.plan(state,{timeline:false}));if(plan.errors.length)throw Error(plan.errors.join('；'));if(!profile.confirmed)throw Error('实测参数尚未确认');
- if(state.machine.model!=='a1-mini')throw Error('当前发送连接仅验证了 A1 mini；其他机型仍可设计导出');
- for(const k of ['x','y','z'])if(!Number.isFinite(position?.[k])||position[k]<0||position[k]>180)throw Error('需要当前已知的喷嘴位置');
+ Models.get(state.machine.model);
+ Models.point(position,state.machine.model);
  position={x:position.x,y:position.y,z:position.z};
  if(position.z<profile.downZ-.001)throw Error('当前 Z 低于已校准纸面接触高度，请先复核位置');
  if(profile.zSpeed>limits.lower||profile.liftSpeed>limits.lift)throw Error(`实机发送限落笔${limits.lower}、抬笔${limits.lift} mm/s`);
- const park=require('./calibration.cjs').position(returnTo||position);park.z=Math.max(park.z,profile.upZ);
+ const park=require('./calibration.cjs').position(returnTo||position,state.machine.model);park.z=Math.max(park.z,profile.upZ);
  if(plan.paths.length>20000)throw Error('作品超过20000笔，请增加照片排线间距或拆分作品');
  const settings={...state.pen,downZ:profile.downZ,upZ:profile.upZ,zSpeed:profile.zSpeed,liftSpeed:profile.liftSpeed};
  const breakdown={draw:0,travel:0,z:0,return:0};let duration=0,end={...position},lastPlot={...position};const returnChunks=[];
@@ -57,7 +57,7 @@ async function execute(printer,job,{cancelled=()=>false,onProgress=()=>{},getTun
  // A normal stop completes only the packet already in flight. Its exact
  // endpoint is confirmed, even in a long pen-down stroke, before the return
  // first lifts Z. Unconfirmed transport/fault errors never initiate a return.
- const steps=flow.returnSteps(position,{...job.returnTo,z:Math.max(job.returnTo.z,position.z)},job.state.pen.travelSpeed,job.profile.liftSpeed);
+ const steps=flow.returnSteps(position,{...job.returnTo,z:Math.max(job.returnTo.z,position.z)},job.state.pen.travelSpeed,job.profile.liftSpeed,job.state.machine.model);
  for(const step of steps){onProgress({phase:'returning',acceptedChunks:done,totalChunks:job.chunks.length,position});await motion.run(printer,step.code,step.seconds);position={...step.end};}
  return {status:cancelled()?'stopped':'commands_sent',returned:true,acceptedChunks:done,totalChunks:job.chunks.length,position,completion:'M400/M73',physicalResultRequiresObservation:true};
 }
