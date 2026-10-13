@@ -1,0 +1,52 @@
+Bambu Pen 0.22.0 — connection fixes, 2026-10-13
+
+Scope: validation before replacing the existing 0.22.0 release assets.
+The installed user application and physical printer were not operated.
+
+Fixed
+- The connection editor required an access code while saying one was saved.
+  Editing now loads it masked, supports explicit reveal, and accepts blank to
+  reuse the encrypted credential for the same serial number. Changing the IP
+  does not require re-entry; changing the printer identity does.
+- Saved model selection is reused with automatic selection. Legacy records
+  without a model can be corrected without re-entering their saved access code.
+  AP05 alone still cannot distinguish A1 and A1 mini.
+- Saving unchanged details on an already connected printer refreshes its live
+  state without tearing down the session and losing the known position. Fresh
+  reports of lost homing or a foreign task still invalidate that position.
+- A duplicate floating connection error could cover the editor's close button.
+  The existing inline error is now used while the editor is open; the report
+  remains available in Feedback.
+- A failed calibration rename changed the live name while reverting the saved
+  list. Profile/name changes now apply after successful persistence.
+
+Validation
+- scripts/test.cjs: 14 suites with A1_PEN_ELECTRON configured, including the
+  three new audits below. All passed.
+- tests/connection-edit-audit.cjs: A1 mini, A1, P1S with incomplete model
+  reports; saved-code reuse, changed IP/model, unchanged-session reuse,
+  replacing a code, corrupt storage recovery and forgetting a printer.
+- tests/connection-edit-desktop-audit.cjs: actual Electron and encrypted test
+  storage; real form validation, show/hide, blank submission, changing serial,
+  bilingual hints, delayed-read races, closing and relaunching with the same
+  artwork, printer and calibration profile.
+- tests/workspace-workflows-audit.cjs: actual browser UI; text editing,
+  right-click copy/delete, undo/redo, raster conversion modes, a 20-stroke
+  sketch limit, erasing and undo/redo, placement without retracing, SVG export,
+  calibration save/rename/width, forced save failure, numbered alignment grid
+  generation/restoration, and reload persistence of artwork and calibration.
+- Existing machine tests cover full-file and streaming jobs, cancellation and
+  subsequent jobs, retained calibration, speed controls and model envelopes.
+- Syntax checked across all 107 tracked/new JavaScript files; git diff --check.
+- The connection desktop audit also passed using the packaged application,
+  with its application path checked against the built payload.
+- The portable EXE passed startup, isolated data storage, update UI, theme,
+  bilingual settings and feedback IPC checks. All 130 packaged application
+  files match source; personal credentials and test data are excluded.
+
+Limits
+The printer tests use simulated transports. They do not establish physical
+compatibility of A1 or P1S, firmware timing, or real-world writing quality.
+An isolated desktop preview refuses real printer connections. Personal data
+and the running installed application were not used or replaced.
+The version remains 0.22.0; no new release entry or announcement is required.

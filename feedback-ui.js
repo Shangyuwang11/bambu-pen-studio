@@ -32,7 +32,11 @@
  function capture(value){
   const event=typeof value==='string'?{message:value}:value||{},text=P.cleanError(event.message??event.error);if(!text)return;
   const classification=P.classify(text,event),key=classification.id+text;
-  latest={message:text,stack:String(event.stack||event.error?.stack||''),classification};if(seen!==key){seen=key;notice.hidden=false;}render();
+  latest={message:text,stack:String(event.stack||event.error?.stack||''),classification};
+  // The connection editor already displays this error beside its form. A
+  // second floating notice obscures its controls, including the close button.
+  const inline=event.source==='connection'&&$('deviceForm')?.hidden===false&&$('deviceError')?.hidden===false&&P.cleanError($('deviceError').textContent)===text;
+  if(inline)notice.hidden=true;else if(seen!==key)notice.hidden=false;seen=key;render();
  }
  async function refreshDraft(){
   const mine=++revision;draft=null;result=null;$('feedbackConsent').checked=false;render();

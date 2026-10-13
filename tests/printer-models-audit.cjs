@@ -77,10 +77,12 @@ async function settled(b){for(let n=0;n<500;n++){if(!b.snapshot().busy){assert.n
     await b.action('wizard/home',{bare:true});let snap=await settled(b);assert.equal(snap.wizard.phase,'install');assert.deepEqual(snap.position,m.park);
     const id=snap.wizard.id;await b.action('wizard/installed',{id,installed:true});await b.action('wizard/jog',{id,delta:-40,continuous:true});snap=await settled(b);assert.equal(snap.position.z,20);
     await b.action('wizard/finish',{id,contact:true,lift:2,profile:p});snap=await settled(b);assert(snap.motionReference.ready);assert.equal(snap.wizard.profile.downZ,20);
+    const commandsBeforeSave=printer.commands.length,positionBeforeSave={...snap.position};await b.connect({...pair,model:'auto'});snap=b.snapshot();assert(snap.motionReference.ready);assert.equal(snap.wizard.id,id);assert.deepEqual(snap.position,positionBeforeSave);assert.equal(printer.commands.length,commandsBeforeSave);
     const profile=snap.wizard.profile;await b.action('prepare',{state:s,profile,position:snap.position});snap=b.snapshot();
     await b.action('start',{id:snap.prepared.id,sha256:snap.prepared.sha256,observedStart:true,clearRoute:true});snap=await settled(b);
     assert(snap.motionReference.ready);assert.deepEqual(snap.position,m.park);
     await b.action('prepare',{state:s,profile,position:snap.position});assert(b.snapshot().prepared);assert.equal(printer.commands.filter(c=>/\bG28\b/.test(c.param||'')).length,1);
+    printer.state.home_flag=0;await b.connect(pair);assert.equal(b.snapshot().position,null);assert.equal(b.snapshot().motionReference.ready,false);assert.equal(b.snapshot().wizard.profile.downZ,20);
    }finally{await b.close();}
   });
   await check(model+': complete upload is read back, started with correct fields and can be repeated',async()=>{
@@ -119,7 +121,7 @@ async function settled(b){for(let n=0;n<500;n++){if(!b.snapshot().busy){assert.n
     await b.connect(pair);const park={x:m.w-22,y:m.h-24,z:m.z-3},profile={...p,downZ:m.z-8,upZ:m.z-6};
     const saved=P.capture({device:{serial},busy:false,position:park,wizard:{phase:'complete',profile,contact:{downZ:profile.downZ,upZ:profile.upZ},calibrationPoint:{...park,z:profile.downZ},returnTo:park}},'Saved '+model,{penSettings:s.pen});
     await b.action('position',{position:park,observed:true});await b.action('wizard/activate-preset',{preset:saved,unchanged:true});assert(b.snapshot().motionReference.ready);
-    await b.connect({...pair,model});assert.equal(printer.commands.length,0);assert(b.snapshot().motionReference.canReusePosition);
+    printer.close();await b.connect({...pair,model});assert.equal(printer.commands.length,0);assert(b.snapshot().motionReference.canReusePosition);
     await b.action('wizard/reuse-position',{preset:saved,unchanged:true});assert.equal(printer.commands.length,0);assert.deepEqual(b.snapshot().position,park);
     let snap=b.snapshot();await b.action('wizard/refine',{id:snap.wizard.id,profile:snap.wizard.profile,unchanged:true});snap=await settled(b);
     assert.equal(snap.wizard.phase,'adjust');assert.equal(snap.position.z,profile.downZ);assert.equal(snap.position.x,park.x);

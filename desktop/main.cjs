@@ -71,7 +71,7 @@ async function start(){
  else if(fs.existsSync(workFile())){try{initialData=validateWork(JSON.parse(fs.readFileSync(workFile(),'utf8')));}catch(e){const backup=workFile()+'.unreadable-'+Date.now()+'.json';fs.copyFileSync(workFile(),backup);dialog.showErrorBox(nt('作品恢复未完成'),'原备份已另存至 '+backup+'。请使用保存的作品文件导入。'+e.message);}}
  bridge=createBridge({loadPositionReceipt:()=>{try{return JSON.parse(fs.readFileSync(path.join(app.getPath('userData'),'position-receipt.json'),'utf8'));}catch{return null;}},savePositionReceipt:v=>atomic(path.join(app.getPath('userData'),'position-receipt.json'),v),...(preview?{printerFactory:()=>{throw Error('独立界面预览不会连接打印机，请绘画结束后打开正式应用');}}:{}),onPositionInvalidated:v=>connectionEvent({event:'position-invalidated',...v}),loadFileJob:()=>{try{return JSON.parse(fs.readFileSync(path.join(app.getPath('userData'),'file-job.json'),'utf8'));}catch{return null;}},saveFileJob:v=>atomic(path.join(app.getPath('userData'),'file-job.json'),v),onMotionDiagnostic:motionEvent,onCredentials:savePair,caPath:path.join(__dirname,'printer.cer')});
  autoConnect=createAutoConnect({bridge,loadPair,onEvent:connectionEvent});
- connectionControls=createConnectionControls({bridge,autoConnect,load:()=>{try{return JSON.parse(fs.readFileSync(path.join(app.getPath('userData'),'connection-preferences.json'),'utf8'));}catch{return null;}},save:v=>atomic(path.join(app.getPath('userData'),'connection-preferences.json'),v)});
+ connectionControls=createConnectionControls({bridge,autoConnect,loadPair,load:()=>{try{return JSON.parse(fs.readFileSync(path.join(app.getPath('userData'),'connection-preferences.json'),'utf8'));}catch{return null;}},save:v=>atomic(path.join(app.getPath('userData'),'connection-preferences.json'),v)});
  try{await bridge.listen(Number(process.env.A1_PEN_PORT||8765));}catch(e){if(e.code==='EADDRINUSE')throw Error('本地连接端口已被占用。请先结束旧联网版的绘图并关闭它的连接服务，再打开桌面版。');throw e;}
  ipcMain.on('pen:bootstrap',event=>{try{trusted(event);event.returnValue={...initialData,language:uiLanguage,preferences:preferences.get(),dark:nativeTheme.shouldUseDarkColors,version:app.getVersion()};}catch{event.returnValue=null;}});
  ipcMain.handle('pen:language',(event,value)=>{trusted(event);if(!['zh-CN','en'].includes(value))throw Error('Invalid language');uiLanguage=value;preferences.patch({language:value});installMenu();win.setTitle('Bambu Pen');return value;});
@@ -94,6 +94,7 @@ async function start(){
  ipcMain.handle('pen:network-online',event=>{trusted(event);if(closing||quitting)return;return connectionLifecycle.wake();});
  ipcMain.handle('pen:reconnect',event=>{trusted(event);return connectionControls.reconnect();});
  ipcMain.handle('pen:pair',(event,value)=>{trusted(event);return connectionControls.pair(value);});
+ ipcMain.handle('pen:saved-access-code',(event,serial)=>{trusted(event);return connectionControls.savedAccessCode(serial);});
  ipcMain.handle('pen:disconnect',event=>{trusted(event);return connectionControls.disconnect();});
  ipcMain.handle('pen:auto-connect',(event,enabled)=>{trusted(event);return connectionControls.setAuto(enabled);});
  ipcMain.handle('pen:forget',async event=>{trusted(event);if(bridge.snapshot().busy||autoConnect.status().connecting)throw Error('请等待当前连接或绘图结束');await connectionControls.disconnect();pairStore.forget();return {forgotten:true};});

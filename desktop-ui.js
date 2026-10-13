@@ -8,11 +8,11 @@
  async function pairing(){try{const m=await PenDesktopAPI.meta(),p=m.printer;
   const a=m.autoConnect||{};window.dispatchEvent(new CustomEvent('penpairing',{detail:m}));autoNote.textContent=printerConnected?'打印机已连接 · 已记住资料，下次打开自动连接':a.userEnabled===false?'自动连接已暂停':a.connecting?'正在自动连接已保存的打印机…':a.phase==='credential_error'?'连接资料恢复失败，请查看连接设置':m.paired||m.bundledPairAvailable?'已记住打印机 · 等待上线后自动连接':'尚未保存打印机连接资料';window.PenDesktopConnection={phase:a.phase,attempts:a.attempts,lastAttemptAt:a.lastAttemptAt,lastSuccessAt:a.lastSuccessAt,events:m.connectionEvents||[]};
   if(p){for(const [id,value] of [['lanIP',p.ip],['lanSerial',p.serial]])if(!$(id).value&&document.activeElement!==$(id))$(id).value=value;
-   $('lanCode').placeholder='访问码已保存，无需重填';$('lanConnect').textContent='连接 / 重试';
+   if(!$('devicePairForm'))$('lanCode').placeholder='访问码已保存，无需重填';$('lanConnect').textContent='连接 / 重试';
    const state=printerConnected?'已连接':a.connecting?'正在自动连接…':a.phase==='credential_error'?'保存的访问码读取失败，请重新填写一次':`等待打印机上线，${Math.max(0,Math.ceil(((a.retryAt||Date.now())-Date.now())/1000))}秒后自动重试`;
    pairNote.textContent=`已保存 ${PenPrinterModels.specs[p.model]?.name||'Bambu Lab'} · ${p.ip} · ${p.serial} · ${state}`+(m.connectError&&!printerConnected?'。上次连接：'+m.connectError:'');
    if(!printerConnected)$('connectionBadge').textContent=(PenPrinterModels.specs[p.model]?.name||'Bambu Lab')+(a.userEnabled===false?' 已断开':m.autoConnect?.connecting?' 连接中':' 等待上线');
-  }else{pairNote.textContent=m.paired?'连接资料未能读取，请重新填写连接信息。':'尚未保存打印机，首次填写后会自动记住。';$('lanCode').placeholder='8位局域网访问码';}
+  }else{pairNote.textContent=m.paired?'连接资料未能读取，请重新填写连接信息。':'尚未保存打印机，首次填写后会自动记住。';if(!$('devicePairForm'))$('lanCode').placeholder='8位局域网访问码';}
  }catch(e){pairNote.textContent='读取连接资料失败：'+e.message;}}
  window.addEventListener('penconnection',e=>{printerConnected=e.detail.printer?.connected===true;pairing();});pairing();setInterval(pairing,3000);save();
  window.addEventListener('online',()=>{PenDesktopAPI.networkOnline?.().catch(()=>{});});
