@@ -1,0 +1,117 @@
+Bambu Pen — problem reports / 问题反馈
+=======================================
+
+0.22.0 replacement build — 2026-10-13
+0.22.0 替换安装包 — 2026-10-13
+
+Using the app / 使用
+-------------------
+Settings → Feedback opens the report window. A failed action also offers:
+- Setup / connection / printer guidance: open the relevant page or refresh state.
+- Program / unknown errors: review a report and choose whether to send it.
+The guidance never homes or moves a printer automatically.
+
+设置 → 问题反馈可打开报告窗口。操作报错时，设置或连接问题会显示对应的
+修改建议；程序异常或暂时无法判断的问题可生成报告。修正按钮只打开对应
+页面或刷新状态，不会自动归零、移动或重试绘画。
+
+Reports contain a version, OS, model, error category, error text and the optional
+description. Application stack and printer state are optional. The app removes
+known saved connection credentials, IPs, serials, local paths and token patterns.
+It does not attach artwork, source images, saved profiles or full logs.
+Free text may still contain personal details: review the exact payload before
+consenting to publication. Reports are public GitHub issues.
+
+报告预览包含版本、系统、机型、错误类别、错误提示和用户填写的说明。
+可取消附带程序错误位置和机器状态。软件会去除已保存的连接资料、IP、
+序列号、本地路径和令牌等内容；不附作品、原图、校准配置或完整日志。
+人工填写的内容仍可能有隐私，请先检查预览，再勾选同意公开提交。
+
+No upload occurs automatically. Without a configured endpoint, Submit is
+disabled and Copy / Export remain available. This build has NO endpoint:
+it does not yet create real anonymous GitHub issues.
+
+不会自动上传。没有配置反馈服务时，“提交”不可用，仍可复制、导出报告。
+本安装包没有配置线上中转服务，尚不能实际匿名创建 GitHub Issue。
+
+Maintainer setup / 维护者启用匿名反馈
+-----------------------------------
+GitHub requires authentication for creating an issue. An anonymous desktop
+client therefore needs a separately hosted relay; end users need no GitHub
+account. Never put the maintainer's token into the EXE, client JavaScript,
+feedback-config.json, GitHub repo or an issue.
+
+GitHub 创建 Issue 需要鉴权。匿名客户端须经过独立服务器，由服务器保存
+维护者凭据。最终用户无需登录，但不能把仓库写入令牌塞进客户端。
+
+Official references:
+https://docs.github.com/en/rest/issues/issues#create-an-issue
+https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens
+
+Deploy only when the owner explicitly authorizes deployment:
+1. Use a Node.js 22+ server with persistent disk and HTTPS reverse proxy.
+   Copy feedback-relay/server.cjs plus ../feedback-policy.js, preserving paths.
+   The server folder is deliberately excluded from the desktop package.
+2. Create a dedicated fine-grained GitHub token restricted to the intended
+   repository, with Issues: write. Put it in the server's secret store as
+   FEEDBACK_GITHUB_TOKEN, never in source files. Enable Issues in the repository.
+3. Set FEEDBACK_REPOSITORY to Shangyuwang11/bambu-pen-studio (or the intended
+   owner/repo), FEEDBACK_DATA_DIR to a persistent directory, and
+   FEEDBACK_RATE_SECRET to a random secret of at least 32 characters.
+4. Run node feedback-relay/server.cjs as ONE service instance. It listens on
+   127.0.0.1:8787 by default (PORT overrides). Use a reverse proxy for HTTPS.
+   GET /health is a liveness check. POST /reports is the report endpoint.
+5. In the reverse proxy, reject bodies over 16 KiB and set timeouts. Overwrite
+   X-Real-IP with the real client IP. Set FEEDBACK_TRUST_LOOPBACK_PROXY=1 only
+   when requests arrive through that trusted loopback proxy. Otherwise leave
+   it unset. Disable request-body logging.
+6. Set desktop/feedback-config.json endpoint to the HTTPS /reports URL, without
+   credentials or query parameters, and repository to the same owner/repo.
+7. On explicit build/release approval, test against a staging repository, then
+   build and release. Check that the endpoint and repository match and that
+   the distributed package contains no server secrets.
+
+只有在维护者明确授权部署后才执行这些步骤。须有稳定的服务器、HTTPS 和
+服务端凭据。本地开发测试使用模拟 GitHub 接口，不会在真实仓库创建报告。
+
+Limits and retry behavior / 限制与重试
+-------------------------------------
+- At most 6 new reports per client IP per hour and 30 total per hour by default.
+  Shared networks share a limit. The server persists limits across restarts;
+  address keys are HMAC hashes, not raw IPs.
+- Reports are bounded to 16 KiB, and the relay sanitizes them again.
+- The relay always writes to its configured repository with a fixed title
+  pattern. User input cannot choose an arbitrary repo, issue title or labels.
+- Each report has a random ID. A successful retry returns the same issue.
+- A network timeout may occur after GitHub creates an issue. Such IDs remain
+  pending and are NOT automatically submitted again.
+- The ledger stores IDs, hashes, timestamps, result URLs and rate counters,
+  not report content. Records expire after 7 days; counters expire after 1 hour.
+- After an uncertain result, retry the same report while its window remains
+  open. Local drafts live in memory for 30 minutes and are not a durable outbox.
+  If restarting the app, check existing issues before creating another report.
+
+The owner can reconcile a pending record by searching GitHub Issues for the
+Report ID appended to the body. If found, stop the relay before updating the
+ledger record to sent with result {number, url}, preserving its digest and at.
+If GitHub rejected a request, fix server credentials/permissions first. Confirm
+no issue was created before removing only that rejected record and retrying.
+Do not delete the whole ledger or run multiple workers against the same file.
+
+This small relay is a starting point for controlled use, not an unmetered public
+inbox. Before broad distribution, add host-level abuse controls and monitor
+limits. Do not log user report bodies or publish the relay's secrets.
+
+本中转采用持久化限流和报告 ID 去重。超时不能当作“未创建”，不会盲目再发。
+有异常待确认时，维护者按 Report ID 检索仓库处理。公开大规模部署前，
+还应设置网关限流和监控；不得记录完整请求内容或发布服务端密钥。
+
+Validation / 验证
+-----------------
+node tests/feedback-audit.cjs
+node tests/feedback-ui-audit.cjs
+A1_PEN_ELECTRON=<electron executable> node tests/feedback-desktop-audit.cjs
+
+Set A1_PEN_PLAYWRIGHT to an installed Playwright module if it is not in the repo.
+Browser tests optionally accept A1_PEN_BROWSER. Desktop tests use a temporary
+profile and preview mode; they do not connect to or operate a physical printer.

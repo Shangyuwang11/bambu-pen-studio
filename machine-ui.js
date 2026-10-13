@@ -6,7 +6,7 @@
  let profile=M.defaults(PenStudio.getSettings()),notice='参数单独保存在本机，不会随作品导入自动覆盖。';
  try{const raw=localStorage.getItem(KEY);if(raw)profile=M.validateProfile(JSON.parse(raw));}catch{recoveryPending=true;notice='旧笔架参数无法恢复，原数据已保留。请重新填写或导入备份。';}
  const get=()=>PenStudio.getState();
- function fill(){for(const k of fields)$('mc_'+k).value=profile[k]??'';$('mc_confirmed').checked=profile.confirmed;$('xyReferenceMeasured').checked=profile.xyReference==='measured';if(profile.xyReference==='measured'&&profile.xSign===1&&profile.ySign===-1){$('frontPenDistance').value=PenCore.round(profile.machineY+profile.refY-profile.machine.h);$('lateralPenDistance').value=PenCore.round(profile.refX-profile.machineX);}}
+ function fill(){const spec=PenPrinterModels.specs[profile.machine.model];for(const k of ['downZ','upZ'])$('mc_'+k).max=spec?.z||256;$('mc_liftSpeed').max=spec?.lift||30;for(const k of fields)$('mc_'+k).value=profile[k]??'';$('mc_confirmed').checked=profile.confirmed;$('xyReferenceMeasured').checked=profile.xyReference==='measured';if(profile.xyReference==='measured'&&profile.xSign===1&&profile.ySign===-1){$('frontPenDistance').value=PenCore.round(profile.machineY+profile.refY-profile.machine.h);$('lateralPenDistance').value=PenCore.round(profile.refX-profile.machineX);}}
  function read(){const p={...profile};for(const k of fields){const v=$('mc_'+k).value;p[k]=['name','material'].includes(k)?v:v.trim()===''?null:Number(v);}p.confirmed=$('mc_confirmed').checked;return p;}
  function status(text){$('machineNotice').textContent=text;}
  function refresh(){

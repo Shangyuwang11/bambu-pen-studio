@@ -12,7 +12,7 @@ const profileDirectory=require('./profile-directory.cjs').chooseProfileDirectory
 app.setPath('userData',profileDirectory.directory);
 const preview=!!process.env.A1_PEN_TEST_DATA&&process.env.A1_PEN_PREVIEW==='1';
 let uiPresented=false,win,bridge,autoConnect,connectionControls,connectionLifecycle,quitting=false,closing=false,powerId=null,powerTimer=null,connectError='',initialData=null;
-let preferences;let uiLanguage='zh-CN',updater,updateTimer,updateStartTimer;
+let feedback;let preferences;let uiLanguage='zh-CN',updater,updateTimer,updateStartTimer;
 function updateState(){const target=process.env.A1_PEN_LAUNCHER_PATH;return {...updater.snapshot(),dataDirectory:app.getPath('userData'),canInstall:process.platform==='win32'&&!!target&&path.isAbsolute(target)&&path.extname(target).toLowerCase()==='.exe'&&fs.existsSync(target)};}
 async function installUpdate(){
  if(closing||quitting||busyForUpdate(bridge.snapshot()))throw Error(nt('绘画或校准结束后才能更新。'));
@@ -62,6 +62,7 @@ function publicPair(){return pairStore.publicPair();}
 async function start(){
  fs.mkdirSync(app.getPath('userData'),{recursive:true});
  updater=createUpdater({version:app.getVersion(),directory:app.getPath('userData')});
+ feedback=require('./feedback.cjs').createFeedback({version:app.getVersion(),secrets:async()=>{const values=[app.getPath('home')];try{const p=await loadPair();if(p)values.push(p.ip,p.serial,p.accessCode);}catch{}return values;}});
  preferences=require('./ui-preferences.cjs').createPreferences(app.getPath('userData'),preview||app.getLocale().startsWith('zh')?'zh-CN':'en');uiLanguage=preferences.get().language;nativeTheme.themeSource=preferences.get().theme;
  try{const log=path.join(app.getPath('userData'),'connection-log.json');if(fs.statSync(log).size<65536){const old=JSON.parse(fs.readFileSync(log,'utf8'));if(Array.isArray(old))for(const item of old.slice(-60)){if(/^[a-z-]+$/.test(item.event)&&Number.isFinite(item.at))connectionEvents.push({event:item.event,at:item.at,...(Number.isInteger(item.attempts)?{attempts:item.attempts}:{})});}}}catch{}
  connectionEvent({event:'app-start',at:Date.now(),version:app.getVersion()});
@@ -84,6 +85,11 @@ async function start(){
  ipcMain.handle('pen:update-file',async event=>{trusted(event);shell.showItemInFolder((await updater.verifiedFile()).file);});
  ipcMain.handle('pen:open-releases',event=>{trusted(event);return shell.openExternal(RELEASES);});
  ipcMain.handle('pen:open-data',async event=>{trusted(event);await win.webContents.executeJavaScript('window.PenDesktop.flush()');const error=await shell.openPath(app.getPath('userData'));if(error)throw Error(error);});
+ ipcMain.handle('pen:feedback-status',event=>{trusted(event);return feedback.status();});
+ ipcMain.handle('pen:feedback-prepare',(event,value)=>{trusted(event);if(!value||Buffer.byteLength(JSON.stringify(value))>20000)throw Error('FEEDBACK_SIZE');return feedback.prepare(value);});
+ ipcMain.handle('pen:feedback-submit',(event,value)=>{trusted(event);return feedback.submit(value);});
+ ipcMain.handle('pen:feedback-copy',(event,id)=>{trusted(event);clipboard.writeText(feedback.markdown(id));return true;});
+ ipcMain.handle('pen:feedback-open',(event,url)=>{trusted(event);if(!feedback.validIssue(url))throw Error('FEEDBACK_URL');return shell.openExternal(url);});
  ipcMain.handle('pen:meta',event=>{trusted(event);return {preview,paired:fs.existsSync(pairFile()),bundledPairAvailable:pairStore.hasBundled(),printer:publicPair(),autoConnect:autoConnect.status(),connectionEvents:connectionEvents.slice(),connectError:autoConnect.status().error||connectError,version:app.getVersion(),dataDirectory:app.getPath('userData')};});
  ipcMain.handle('pen:network-online',event=>{trusted(event);if(closing||quitting)return;return connectionLifecycle.wake();});
  ipcMain.handle('pen:reconnect',event=>{trusted(event);return connectionControls.reconnect();});

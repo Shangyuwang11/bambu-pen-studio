@@ -12,6 +12,7 @@
   const current = () => state.objects.find(o => o.id === selected);
   const snapshot = () => JSON.stringify(state);
   const nameOf = o => o.type === 'text' ? (o.text.split('\n')[0] || '空白文字') : o.name;
+  function fault(error){window.dispatchEvent(new CustomEvent('penproblem',{detail:{message:(error?.name&&error.name!=='Error'?error.name+': ':'')+(error?.message||String(error)),stack:error?.stack||'',source:'application'}}));}
   function toast(message) { $('toast').textContent = message; $('toast').classList.add('visible'); clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').classList.remove('visible'), 4200); }
   try { const stored = window.PenDesktopAPI?.initialState ? JSON.stringify(PenDesktopAPI.initialState) : localStorage.getItem(STORE); if (stored) { state = C.validateProject(JSON.parse(stored)); selected = state.objects[0]?.id || 'paper'; } } catch { recoveryHold=true;toast('自动保存未能读取，原数据已保留。当前编辑请用“保存作品”另存。'); }
   function checkpoint() { history.push(snapshot()); while (history.length > 35 || (history.length > 1 && history.reduce((sum, s) => sum + s.length, 0) > 20000000)) history.shift(); future = []; }
@@ -30,7 +31,7 @@
   }
   function mutate(fn, options = {}) {
     const before = snapshot();
-    try { fn(); } catch (e) { state = JSON.parse(before); toast(e.message); syncFields(); return; }
+    try { fn(); } catch (e) { state = JSON.parse(before); fault(e); toast(e.message); syncFields(); return; }
     if (before !== snapshot()) { history.push(before); while (history.length > 35 || (history.length > 1 && history.reduce((sum, s) => sum + s.length, 0) > 20000000)) history.shift(); future = []; }
     refresh(options);
   }
@@ -337,7 +338,7 @@
     if (busy) return; busy = true; stop(true); document.body.classList.add('busy');
     const panels = [...document.querySelectorAll('aside,header,.toolbar,.preview-panel')]; panels.forEach(p => { p.inert = true; });
     await new Promise(r => setTimeout(r, 35));
-    try { await fn(); } catch (error) { toast(error.message || '处理失败'); } finally { busy = false; document.body.classList.remove('busy'); panels.forEach(p => { p.inert = false; }); }
+    try { await fn(); } catch (error) { fault(error); toast(error.message || '处理失败'); } finally { busy = false; document.body.classList.remove('busy'); panels.forEach(p => { p.inert = false; }); }
   }
   function imagePlacement(){
     const p=state.paper,m=p.margin;let x=p.x+m,y=p.y+m,right=p.x+p.w-m,bottom=p.y+p.h-m;
@@ -390,15 +391,15 @@
     }})().catch(e=>{imageUpdateError=e.message;throw e;}).finally(()=>{imageUpdatePromise=null;});return imageUpdatePromise;
   }
   function download(name, content, mime) { const url = URL.createObjectURL(new Blob([content], { type: mime })); const a = document.createElement('a'); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 10000); }
-  $('saveProject').onclick = () => { try{C.validateProject(state);const json=JSON.stringify(state);if(new Blob([json]).size>30000000)throw Error('作品超过 30 MB，请拆分后保存');download('纸上作品.a1pen.json', json, 'application/json'); toast('作品已导出，可继续编辑；这不是打印机文件');}catch(e){toast('保存失败：'+e.message);} };
+  $('saveProject').onclick = () => { try{C.validateProject(state);const json=JSON.stringify(state);if(new Blob([json]).size>30000000)throw Error('作品超过 30 MB，请拆分后保存');download('纸上作品.a1pen.json', json, 'application/json'); toast('作品已导出，可继续编辑；这不是打印机文件');}catch(e){fault(e);toast('保存失败：'+e.message);} };
   $('openProject').onclick = () => $('projectFile').click();
   $('projectFile').onchange = async () => {
     const file = $('projectFile').files[0]; $('projectFile').value = ''; if (!file) return;
     await runBusy(async()=>{if (file.size > 30000000) throw Error('作品文件请小于 30 MB'); const loaded = C.validateProject(JSON.parse(await file.text())); checkpoint(); state = loaded; selected = state.objects[0]?.id || 'paper'; zoom = 1; refresh(); toast('作品已打开，可撤销返回上一份');});
   };
-  $('exportSvg').onclick = async () => { try { await ensureImagePaths(); download('纸上笔迹.svg', C.toSVG(state,designOptions()), 'image/svg+xml'); toast('已导出毫米单位 SVG；用于矢量软件，不能直接在打印机上运行'); } catch (e) { toast(e.message); } };
+  $('exportSvg').onclick = async () => { try { await ensureImagePaths(); download('纸上笔迹.svg', C.toSVG(state,designOptions()), 'image/svg+xml'); toast('已导出毫米单位 SVG；用于矢量软件，不能直接在打印机上运行'); } catch (e) { fault(e);toast(e.message); } };
   $('exportPlan').onclick = async () => {
-    try{await ensureImagePaths();download('纸上路径.plan.json', JSON.stringify(C.toDesignPlan(state,designOptions())), 'application/json');toast('已导出设计路径，不是可执行的 G-code / 3MF');}catch(e){toast(e.message);}
+    try{await ensureImagePaths();download('纸上路径.plan.json', JSON.stringify(C.toDesignPlan(state,designOptions())), 'application/json');toast('已导出设计路径，不是可执行的 G-code / 3MF');}catch(e){fault(e);toast(e.message);}
   };
   $('exportInfo').onclick=()=>{$('exportDialog').showModal();};$('closeExport').onclick=()=>{$('exportDialog').close();};
   $('saveFromDialog').onclick=()=>$('saveProject').click();$('svgFromDialog').onclick=()=>$('exportSvg').click();$('planFromDialog').onclick=()=>$('exportPlan').click();

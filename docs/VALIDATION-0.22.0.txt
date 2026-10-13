@@ -1,0 +1,57 @@
+Bambu Pen 0.22.0 — replacement validation, 2026-10-13
+====================================================
+
+Validation level: code, synthetic protocol reports, actual Chromium/Electron
+interface and packaged Windows executable. No physical A1 or P1S was connected.
+The A1/P1S experimental notice remains in the app and release notes.
+
+Machine matrix (A1 mini, A1, P1S):
+- N1/N2S/C12 identification; AP05 ambiguity requires an explicit actual model.
+- Model-matched pairing, canvas, calibration profiles and persistent reconnect.
+- Full XYZ envelope, profile positions above 180 mm, P1S 250 mm Z limit.
+- Pen front/lateral transforms, clipped drawing corridor and model lift caps.
+- Homing workflow, single 40 mm adjustment, finish and refinement at saved point.
+- Saved calibration, reconnect and position reuse without issuing homing.
+- Streamed successive drawings, stop and return to the original park point.
+- Whole-file metadata, matching model ID, bed type, MD5/SHA-256 fields,
+  verified upload and rejected corrupt readback before starting a task.
+- Whole-file completion -> new task -> cancellation -> return -> new task.
+- Speed commands 1/2/3/4/2 while the observed file is running.
+- Extreme generated feed rates and adjusted strokes stay within model caps.
+- User-confirmed file-only preparation does not invent a homed/jog-ready state.
+- Profiles / completed positions cannot be applied to a different model.
+- No unintended homing, heating, extrusion or motor release in drawing files.
+
+UI-specific checks (A1, P1S):
+- Real rendered pairing form, detected model, canvas matching, calibration state.
+- Base/extreme lift presets, model-specific manual-height input bounds.
+- Bilingual experimental notice; no machine command issued by these UI checks.
+
+Two presentation issues corrected:
+- Manual Z / lift input attributes previously advertised shared 256 mm / 30 mm/s
+  maxima even for smaller models. They now follow the profile's actual model.
+- GUIDE.html still described A1/P1S as export-only. It now matches the current
+  desktop guide.
+
+Feedback and packaging:
+- Classified guidance; immutable reviewed reports; private-data filtering.
+- Consent required; retry IDs; relay payload limits; error and timeout handling.
+- Browser and real Electron UI checks; packaged feedback IPC.
+- Unconfigured anonymous relay explicitly disabled. Export/copy remain usable.
+- Existing user data is external to the EXE and is not bundled.
+- Existing update, profile-migration, pairing, receipt and failed-state tests run.
+
+Not established by these tests:
+- Firmware acceptance or physical movement on a real A1 / P1S.
+- Holder clearance, pen contact height, paper position or drawing quality.
+- Live anonymous GitHub issue submission (relay not deployed).
+
+Reproduction:
+node scripts/test.cjs
+node tests/feedback-desktop-audit.cjs
+node tests/updates-desktop-audit.cjs
+node tests/packaged-updates-audit.cjs
+
+Desktop tests require A1_PEN_ELECTRON and A1_PEN_PLAYWRIGHT.
+Packaged test requires A1_PEN_PACKAGE. All desktop tests isolate user data and
+disable real-printer connections. No production drawing or motion is sent.

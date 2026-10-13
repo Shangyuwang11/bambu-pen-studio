@@ -1,0 +1,23 @@
+'use strict';
+const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict');
+const {_electron}=require(process.env.A1_PEN_PLAYWRIGHT||'playwright');
+const root=path.resolve(__dirname,'..'),data=fs.mkdtempSync(path.join(os.tmpdir(),'pen-feedback-desktop-'));
+let app;
+(async()=>{try{
+ const env={...process.env,A1_PEN_TEST_DATA:data,A1_PEN_PREVIEW:'1',A1_PEN_TEST_HIDE:'1',A1_PEN_PORT:'0'};delete env.ELECTRON_RUN_AS_NODE;
+ app=await _electron.launch({executablePath:process.env.A1_PEN_ELECTRON,args:[root],env,timeout:30000});
+ const page=await app.firstWindow(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.waitForFunction(()=>document.documentElement.dataset.uiBoot==='ready');
+ const status=await page.evaluate(()=>PenDesktopAPI.feedbackStatus());assert.equal(status.enabled,false);
+ const d=await page.evaluate(()=>PenDesktopAPI.prepareFeedback({message:'TypeError in import, serial=TESTMODEL0001 accessCode=12345678 192.168.1.2',stack:'at draw (C:\\Users\\Private\\project\\app.js:10:2)',steps:'点导入，然后出错',diagnostics:true,category:'software',model:'a1'}));
+ assert.equal(d.report.version,'0.22.0');assert.equal(d.report.model,'a1');assert(d.report.platform.startsWith('win32'));for(const v of ['TESTMODEL0001','12345678','192.168.1.2','Private','project'])assert(!d.markdown.includes(v),v);
+ const denied=await page.evaluate(async id=>{const result=[];for(const fn of [()=>PenDesktopAPI.submitFeedback({id}),()=>PenDesktopAPI.submitFeedback({id,consent:true}),()=>PenDesktopAPI.openFeedbackIssue('https://untrusted.invalid/issues/42')])try{await fn();result.push('accepted');}catch(e){result.push(e.message);}return result;},d.id);
+ assert.match(denied[0],/FEEDBACK_CONSENT/);assert.match(denied[1],/FEEDBACK_UNCONFIGURED/);assert.match(denied[2],/FEEDBACK_URL/);
+ await page.locator('#openSettings').click();await page.locator('[data-settings-tab=feedback]').click();await page.locator('#openFeedback').click();
+ await page.locator('#feedbackSteps').fill('画'.repeat(3000));await page.waitForFunction(()=>document.querySelector('#feedbackPreview').textContent.includes('画画'));
+ assert.equal(await page.locator('#feedbackResult').textContent(),'');await page.locator('#feedbackConsent').check();assert(await page.locator('#feedbackSubmit').isDisabled());
+ assert.match(await page.locator('#feedbackService').textContent(),/尚未启用/);assert.equal((await page.evaluate(()=>PenDesktopAPI.meta())).preview,true);
+ const wide=await page.locator('#feedbackSubmit').boundingBox();assert(wide.y+wide.height<await page.evaluate(()=>innerHeight));
+ await page.screenshot({path:path.join(root,'test-output/feedback-desktop.png')});await page.locator('#feedbackClose').click();
+ await page.evaluate(()=>PenDesktop.flush());assert(fs.existsSync(path.join(data,'workspace.json')));assert.deepEqual(errors,[]);
+ console.log('PASS actual Electron: trusted feedback IPC, private-data filtering, long Chinese report, endpoint disabled, no external navigation or printer commands');
+}finally{await app?.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

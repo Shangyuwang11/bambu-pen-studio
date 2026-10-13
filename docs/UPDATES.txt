@@ -28,3 +28,13 @@ Published stable releases must contain Bambu-Pen-Studio-VERSION-win-x64.exe with
 Local data lives outside the EXE in %USERPROFILE%\.a1-pen-studio. Save project JSON files separately for backups and moving artwork between computers.
 
 从 0.21.0 起显示名称为 Bambu Pen。固定数据目录、AppUserModelID 与 GitHub 仓库不变。发布资产仍使用 Bambu-Pen-Studio-版本号-win-x64.exe，保证旧版更新器可以识别。打包时 rcedit 写入运行程序名称、图标与版本；不要只重命名 electron.exe。
+
+2026-10-13 explicit replacement / 本次同版本替换
+The maintainer explicitly requested replacing GitHub 0.22.0 after revalidation.
+The existing-release guard in publish-release.cjs remains unchanged. This one
+replacement verifies staged assets before changing the canonical filenames and
+updates the tag to the corresponding source commit. Older 0.22.0 installations
+need a manual download because the version number does not increase.
+本次维护者明确要求验证后替换 GitHub 的 0.22.0。常规发布脚本仍禁止自动
+覆盖已发布版本；本次先上传并校验替换包，再切换正式文件名与源码标签。
+已装 0.22.0 的用户需重新下载；今后仍需维护者明确要求才打包或发布。

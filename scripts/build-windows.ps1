@@ -48,7 +48,7 @@ Copy-Item -LiteralPath (Join-Path $source 'assets') -Destination $appFolder -Rec
 foreach($folder in @('bridge','desktop')){
  $destination=Assert-BuildPath (Join-Path $appFolder $folder)
  New-Item -ItemType Directory -Force -Path $destination | Out-Null
- Get-ChildItem -LiteralPath (Join-Path $source $folder) -File | Where-Object { $_.Extension -eq '.cjs' -or $_.Name -in 'update-helper.ps1','printer.cer','icon.ico','icon.png','NOTICE.md' } | Copy-Item -Destination $destination
+ Get-ChildItem -LiteralPath (Join-Path $source $folder) -File | Where-Object { $_.Extension -eq '.cjs' -or $_.Name -in 'update-helper.ps1','feedback-config.json','printer.cer','icon.ico','icon.png','NOTICE.md' } | Copy-Item -Destination $destination
 }
 $manifest=@(Get-ChildItem -LiteralPath $appFolder -File -Recurse | ForEach-Object { [System.IO.Path]::GetRelativePath($appFolder,$_.FullName).Replace('\','/') })
 $privatePattern='bundled-printer|\.dpapi$|(^|/)(tests?|examples?|experiments?|node_modules|__pycache__|\.git)(/|$)|AUDIT|workspace\.json|printer\.enc|connection-log|\.(test|spec)\.[cm]?js$'

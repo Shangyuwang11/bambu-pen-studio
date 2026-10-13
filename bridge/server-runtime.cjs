@@ -266,7 +266,7 @@ function createBridge(options={}){
    }
    if(req.method!=='GET'){respond(405,{error:'Method rejected'});return;}
    const rel=decodeURIComponent(url.pathname==='/'?'/index.html':url.pathname).slice(1),staticFile=path.resolve(ROOT,rel);
-   if(!staticFile.startsWith(ROOT+path.sep)||rel.split(/[\\/]/).some(p=>['bridge','tests','desktop'].includes(p))||!mime[path.extname(staticFile)]||!fs.existsSync(staticFile)||!fs.statSync(staticFile).isFile()){respond(404,{error:'Not found'});return;}
+   if(!staticFile.startsWith(ROOT+path.sep)||rel.split(/[\\/]/).some(p=>['bridge','tests','desktop','feedback-relay'].includes(p))||!mime[path.extname(staticFile)]||!fs.existsSync(staticFile)||!fs.statSync(staticFile).isFile()){respond(404,{error:'Not found'});return;}
    let body=fs.readFileSync(staticFile);if(path.basename(staticFile)==='index.html')body=Buffer.from(body.toString().replace("connect-src 'none'","connect-src 'self'"));res.writeHead(200,{'Content-Type':mime[path.extname(staticFile)]});res.end(body);
   }catch(e){respond(400,{error:e.message});}
  });

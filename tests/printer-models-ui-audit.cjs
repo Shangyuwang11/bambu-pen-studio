@@ -24,6 +24,7 @@ class Fake extends EventEmitter {
    await page.locator('#stepCalibration').click();assert.equal(await page.locator('#calHome').isDisabled(),false);
    await page.evaluate(()=>{PenNativeShell.go('design');document.querySelector('#fasterSpeed').click();});
    assert.equal(await page.evaluate(()=>PenMachineUI.getProfile().liftSpeed),model==='p1s'?20:25);
+   assert.equal(await page.locator('#mc_downZ').getAttribute('max'),String(Models.get(model).z));assert.equal(await page.locator('#mc_upZ').getAttribute('max'),String(Models.get(model).z));assert.equal(await page.locator('#mc_liftSpeed').getAttribute('max'),String(Models.get(model).lift));
    await page.evaluate(()=>document.querySelector('#extremeSpeedPreset').click());assert.equal(await page.evaluate(()=>PenMachineUI.getProfile().liftSpeed),model==='p1s'?20:30);
    await page.evaluate(()=>{PenNativeShell.go('devices');PenI18n.setLanguage('en');});await page.waitForTimeout(100);
    assert.match(await page.locator('#deviceModelInfo').textContent(),/not.*hardware/i);

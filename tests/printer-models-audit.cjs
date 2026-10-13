@@ -94,6 +94,51 @@ async function settled(b){for(let n=0;n<500;n++){if(!b.snapshot().busy){assert.n
    }
    assert.equal(uploads.length,2);assert.notEqual(uploads[0].filename,uploads[1].filename);session.detach();
   });
+  await check(model+': full-file finish, speed changes, cancellation and next job retain calibration through bridge',async()=>{
+   const printer=new Fake(model),b=createBridge({printerFactory:()=>printer,ftpFactory:()=>({async connect(){},async login(){},async uploadVerified(filename,buffer){return{bytes:buffer.length,readbackVerified:true,sha256:crypto.createHash('sha256').update(buffer).digest('hex')};},async finish(){},close(){}})});
+   try{
+    await b.connect(pair);await b.action('wizard/home',{bare:true});let snap=await settled(b),id=snap.wizard.id;
+    await b.action('wizard/installed',{id,installed:true});await b.action('wizard/jog',{id,delta:-40,continuous:true});await settled(b);
+    await b.action('wizard/finish',{id,contact:true,lift:2,profile:p});snap=await settled(b);const profile=snap.wizard.profile;
+    for(const outcome of ['complete','stop','complete']){
+     await b.action('prepare',{state:s,profile,position:b.snapshot().position});const task=b.snapshot().prepared;
+     await b.action('start-file',{id:task.id,sha256:task.sha256,observedStart:true,clearRoute:true});const filename=b.snapshot().fileTask.filename;
+     printer.report({gcode_state:'RUNNING',gcode_file:filename,mc_percent:1});
+     for(const level of [1,2,3,4,2]){await b.action('file/speed',{level});assert.equal(printer.commands.at(-1).command,'print_speed');assert.equal(printer.commands.at(-1).param,String(level));}
+     if(outcome==='stop'){await b.action('stop',{});assert.equal(printer.commands.at(-1).command,'stop');printer.report({gcode_state:'FAILED',mc_percent:20});}
+     else printer.report({gcode_state:'FINISH',mc_percent:100});
+     snap=await settled(b);assert(snap.motionReference.ready,JSON.stringify(snap.motionReference));assert.deepEqual(snap.position,m.park);assert.equal(snap.wizard.profile.downZ,20);assert.equal(snap.wizard.profile.upZ,22);
+    }
+    assert.equal(printer.commands.filter(c=>/\bG28\b/.test(c.param||'')).length,1,'No repeated homing between tasks');
+   }finally{await b.close();}
+  });
+  await check(model+': saved full-travel preset, reconnect, height refinement and user-confirmed file send',async()=>{
+   let storedReceipt=null,storedMemory=null,printer;
+   const b=createBridge({printerFactory:()=>printer=new Fake(model),loadPositionReceipt:()=>storedReceipt,savePositionReceipt:v=>storedReceipt=v,loadCalibrationReference:()=>storedMemory,saveCalibrationReference:v=>storedMemory=v});
+   try{
+    await b.connect(pair);const park={x:m.w-22,y:m.h-24,z:m.z-3},profile={...p,downZ:m.z-8,upZ:m.z-6};
+    const saved=P.capture({device:{serial},busy:false,position:park,wizard:{phase:'complete',profile,contact:{downZ:profile.downZ,upZ:profile.upZ},calibrationPoint:{...park,z:profile.downZ},returnTo:park}},'Saved '+model,{penSettings:s.pen});
+    await b.action('position',{position:park,observed:true});await b.action('wizard/activate-preset',{preset:saved,unchanged:true});assert(b.snapshot().motionReference.ready);
+    await b.connect({...pair,model});assert.equal(printer.commands.length,0);assert(b.snapshot().motionReference.canReusePosition);
+    await b.action('wizard/reuse-position',{preset:saved,unchanged:true});assert.equal(printer.commands.length,0);assert.deepEqual(b.snapshot().position,park);
+    let snap=b.snapshot();await b.action('wizard/refine',{id:snap.wizard.id,profile:snap.wizard.profile,unchanged:true});snap=await settled(b);
+    assert.equal(snap.wizard.phase,'adjust');assert.equal(snap.position.z,profile.downZ);assert.equal(snap.position.x,park.x);
+    await b.action('wizard/finish',{id:snap.wizard.id,contact:true,lift:2,profile});snap=await settled(b);assert(snap.motionReference.ready);
+    // Loss of the firmware homed flag does not invent a motion-ready position.
+    printer.report({home_flag:0});assert(!b.snapshot().motionReference.ready);
+    const commands=printer.commands.length;await b.action('prepare-file',{state:s,profile:snap.wizard.profile,unchanged:true,clearRoute:true});
+    assert(b.snapshot().prepared.fileOnly);assert.equal(printer.commands.length,commands);assert(!b.snapshot().motionReference.ready);
+   }finally{await b.close();}
+  });
+  await check(model+': damaged upload cannot start the file and extreme speed stays within model limits',async()=>{
+   const printer=new Fake(model),session=createFileSession({ftpFactory:()=>({async connect(){},async login(){},async uploadVerified(){return{readbackVerified:true,sha256:'0'.repeat(64)};},close(){}})});
+   session.attach(printer,serial);try{await assert.rejects(session.start(job,'12345678'),/读回/);assert.equal(printer.commands.length,0);}finally{session.detach();}
+   const fast=scene(model);fast.s.pen.speedMode='extreme';fast.s.pen.drawSpeed=500;fast.s.pen.travelSpeed=500;fast.p.liftSpeed=m.lift;fast.p.zSpeed=15;
+   const prepared=Job.prepare(fast.s,fast.p,fast.start);Pack.build(prepared);
+   const tuned=Tune.chunk(prepared.chunks[0],prepared,Tune.request(Tune.create(prepared),{level:4,delta:-.05},prepared),fast.start,0);
+   for(const line of tuned.code.split('\n'))if(/^G1\b/.test(line)){const feed=+(/F([\d.]+)/.exec(line)?.[1]);assert(feed<=(/\bZ/.test(line)?m.lift:500)*60+.001);}
+   assert.throws(()=>Tune.request(Tune.create(prepared),{delta:-2},prepared),/0.05/);
+  });
   await check(model+': completed file retains large coordinates and does not attach to another model',()=>{
    const filename='a1pen_1234567890abcdef12345678.gcode.3mf',end={x:m.w-20,y:m.h-20,z:m.z-2};
    fake.report({gcode_state:'FINISH',gcode_file:filename,mc_percent:100});

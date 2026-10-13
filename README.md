@@ -18,6 +18,11 @@ A local desktop workspace for pen drawing with Bambu Lab printers. Community pro
 - Named calibration profiles, nib width and mount offsets / 校准配置、笔芯线宽与笔架偏移
 - Local printer connection, status refresh, full-file and streamed drawing / 局域网连接、整图与分段任务
 - In-app update checks, verified downloads and persistent local data / 软件内检查更新、校验下载、保留本机数据
+- Error guidance and reviewed problem reports / 错误分类建议、脱敏报告预览与导出
+
+Problem reports: **Settings → Feedback**. Anonymous GitHub submission requires a separately configured server; this build offers Copy / Export until that service is enabled. No reports upload automatically. See [setup and privacy / 配置与隐私](docs/FEEDBACK.txt).
+
+问题报告位于 **设置 → 问题反馈**。匿名提交到 GitHub 需要另行启用中转服务；未配置服务时可复制、导出，不会自动上传。
 
 ## Download & updates / 下载与更新
 

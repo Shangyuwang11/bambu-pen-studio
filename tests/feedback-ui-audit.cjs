@@ -1,0 +1,42 @@
+'use strict';
+const assert=require('node:assert/strict'),path=require('node:path'),fs=require('node:fs');
+const {createBridge}=require('../bridge/server.cjs'),{createFeedback}=require('../desktop/feedback.cjs');
+const {chromium}=require(process.env.A1_PEN_PLAYWRIGHT||'playwright');
+(async()=>{
+ const b=createBridge();await b.listen(0);const browser=await chromium.launch({headless:true,...(process.env.A1_PEN_BROWSER?{executablePath:process.env.A1_PEN_BROWSER}:{})}),page=await browser.newPage({viewport:{width:1280,height:900}}),errors=[];
+ const output=path.join(__dirname,'../test-output');fs.mkdirSync(output,{recursive:true});let calls=0,payload,release;
+ try{
+  page.on('pageerror',e=>errors.push(e.message));await page.goto(b.origin);await page.waitForFunction(()=>document.documentElement.dataset.uiBoot==='ready');
+  await page.evaluate(()=>PenFeedbackUI.capture({message:"Error invoking remote method 'pen:pair': Error: 请填写访问码"}));
+  assert.equal(await page.locator('#problemTitle').textContent(),'检查连接资料');
+  await page.locator('#problemFix').click();assert(await page.locator('#deviceAdd').isVisible());
+  await page.locator('#openSettings').click();await page.locator('[data-settings-tab=feedback]').click();await page.locator('#openFeedback').click();
+  await page.waitForFunction(()=>document.querySelector('#feedbackPreview').textContent.includes('Version:'));
+  await page.locator('#feedbackConsent').check();assert(await page.locator('#feedbackSubmit').isDisabled());assert.match(await page.locator('#feedbackService').textContent(),/尚未启用/);
+  const downloadPromise=page.waitForEvent('download');await page.locator('#feedbackExport').click();const download=await downloadPromise;assert.equal(download.suggestedFilename(),'bambu-pen-feedback.txt');const stream=await download.createReadStream(),chunks=[];for await(const c of stream)chunks.push(c);assert.match(Buffer.concat(chunks).toString(),/Bambu Pen problem report/);
+  await page.locator('#feedbackClose').click();
+  const client=createFeedback({version:'0.22.0',url:'https://mock.example/reports',secrets:async()=>['PrivateSerialXYZ','AbCdE123'],fetchImpl:async(_url,options)=>{calls++;payload=JSON.parse(options.body);await new Promise(r=>release=r);return new Response(JSON.stringify({number:42,url:'https://github.com/Shangyuwang11/bambu-pen-studio/issues/42'}));}});
+  await page.exposeFunction('testPrepare',v=>client.prepare(v));await page.exposeFunction('testSubmit',v=>client.submit(v));
+  await page.evaluate(()=>{window.PenDesktopAPI={version:'0.22.0',prepareFeedback:testPrepare,submitFeedback:testSubmit};PenFeedbackUI.capture({message:'TypeError: undefined at 192.168.9.2 serial=PrivateSerialXYZ',stack:'at draw (C:\\Users\\PrivatePerson\\project\\app.js:10:2)',source:'runtime'});});
+  await page.locator('#problemReport').click();await page.waitForFunction(()=>document.querySelector('#feedbackPreview').textContent.includes('TypeError'));
+  await page.locator('#feedbackSteps').fill('Import an image with AbCdE123');await page.waitForFunction(()=>document.querySelector('#feedbackPreview').textContent.includes('Import an image'));
+  const preview=await page.locator('#feedbackPreview').textContent();for(const value of ['192.168.9.2','PrivateSerialXYZ','PrivatePerson','AbCdE123'])assert(!preview.includes(value),value);
+  assert(await page.locator('#feedbackSubmit').isDisabled());await page.locator('#feedbackConsent').check();assert(!(await page.locator('#feedbackSubmit').isDisabled()));
+  await page.locator('#feedbackSteps').fill('Edit the image');assert(!(await page.locator('#feedbackConsent').isChecked()));assert(await page.locator('#feedbackSubmit').isDisabled());
+  await page.waitForFunction(()=>document.querySelector('#feedbackPreview').textContent.includes('Edit the image'));
+  await page.locator('#feedbackDiagnostics').uncheck();await page.waitForFunction(()=>!document.querySelector('#feedbackPreview').textContent.includes('Application stack')&&document.querySelector('#feedbackPreview').textContent.includes('Edit the image'));
+  assert(await page.evaluate(()=>document.querySelector('#feedbackPrivacy').getBoundingClientRect().bottom<=document.querySelector('#feedbackStepsLabel').getBoundingClientRect().top),'Dialog header must not overlap description');
+  await page.screenshot({path:path.join(output,'feedback-zh.png')});
+  const before=await page.locator('#feedbackPreview').textContent();await page.evaluate(()=>{PenAppearance.setTheme('dark');PenI18n.setLanguage('en');});await page.waitForTimeout(150);
+  assert.equal(await page.locator('#feedbackTitle').textContent(),'Report a problem');assert.equal(await page.locator('#feedbackPreview').textContent(),before);
+  await page.screenshot({path:path.join(output,'feedback-dark-en.png')});
+  const colors=await page.locator('#feedbackPreview').evaluate(n=>({bg:getComputedStyle(n).backgroundColor,text:getComputedStyle(n).color}));assert.notEqual(colors.bg,'rgb(244, 247, 243)');
+  await page.locator('#feedbackConsent').check();await page.locator('#feedbackSubmit').click();await page.waitForFunction(()=>document.querySelector('#feedbackClose').disabled);
+  assert(await page.locator('#feedbackSteps').isDisabled());await page.keyboard.press('Escape');assert(await page.locator('#feedbackDialog').evaluate(n=>n.open));await page.evaluate(()=>PenFeedbackUI.open());assert.equal(calls,1);
+  release();await page.waitForFunction(()=>document.querySelector('#feedbackResult').textContent.includes('#42'));assert.equal(calls,1);assert.equal(payload.report.diagnostics,false);assert(!Object.hasOwn(payload.report,'stack'));assert(await page.locator('#feedbackSubmit').isDisabled());assert(await page.locator('#feedbackIssue').isVisible());
+  await page.setViewportSize({width:1100,height:700});assert(await page.locator('#feedbackClose').isVisible());assert(await page.locator('#feedbackSubmit').isVisible());assert(await page.evaluate(()=>document.querySelector('#feedbackSubmit').getBoundingClientRect().bottom<innerHeight));
+  await page.locator('#feedbackClose').click();assert.deepEqual(errors,[]);
+  const forbidden=await page.request.get(b.origin+'/feedback-relay/server.cjs');assert.equal(forbidden.status(),404);
+  console.log('PASS feedback UI: setup guidance, export, private-data preview, consent reset, single submission, bilingual themes; no printer commands or GitHub requests');
+ }finally{await browser.close();await b.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -17,3 +17,15 @@ A1 and P1S have passed code and simulated workflow tests, including UI checks. T
 - 保留原连接资料、作品和校准配置；公开安装包不含任何私人数据。
 
 A1 / P1S 已通过代码与模拟流程测试，尚未实机验证。
+
+Replacement build — 2026-10-13
+- Rechecked A1 / P1S connection, homing wizard, saved profiles, reconnect, streamed jobs, whole-file completion, speed commands, cancellation and next-job reuse with simulated printers and real UI tests.
+- Corrected model-specific manual-height and lift-speed input limits; removed an outdated help page that still described A1 / P1S as export-only.
+- Added error-specific setup guidance and reviewed, redacted reports under Settings > Feedback. Copy/export works now; anonymous GitHub upload requires a separate relay service, which is not enabled in this package.
+- Replaces the assets and source tag of this existing 0.22.0 release at the maintainer's request. If you already installed 0.22.0, download the EXE again: an unchanged version number will not trigger the old updater.
+
+替换包更新 — 2026-10-13
+- 补测 A1 / P1S 连接、校准、配置恢复、重连、分段与整图任务、任务内调速、取消和再次发送；使用模拟打印机与真实界面测试，仍未进行 A1 / P1S 实机验证。
+- 修正手动笔高、抬笔速度输入框的机型上限，更新仍误写 A1 / P1S 仅能导出的旧帮助页。
+- 新增「设置 → 问题反馈」：设置错误给出建议，程序异常可以查看脱敏报告后复制、导出。匿名提交的中转服务尚未启用。
+- 按维护者要求替换本 0.22.0 的安装包与源码标签；已经安装 0.22.0 的用户请重新下载安装包，同版本不会触发旧更新器提示。
