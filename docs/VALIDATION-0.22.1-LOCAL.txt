@@ -1,0 +1,26 @@
+Bambu Pen 0.22.1 — local package validation
+Date: 2026-10-13
+
+User requested opening the latest repaired version. Built a new local portable
+EXE using Electron 44.4.5 and updated the existing desktop shortcut.
+No GitHub push or release publication was performed.
+
+Artifact SHA-256:
+2201e9be820f78e8febaf05c6b4b032b70e9608ea4a7ec754cae0be8fb3c33ff
+
+Checks passed:
+- Packaged application matches all 131 public source files, including the new
+  shutdown deadline module. No personal profiles or credentials are bundled.
+- Actual portable launcher: extraction, version, settings, isolated profile,
+  IPC saving, language change, normal close, relaunch and project restoration.
+- Native close audit against the built application: save timeout, repeated
+  close clicks, return-to-app, retry and explicit exit after failed saving.
+- Prior 21-suite source regression remains recorded in
+  VALIDATION-UNRELEASED-RESILIENCE.txt.
+- Existing profile files and desktop shortcut were backed up before launch.
+- Production window is visible, executable reports 0.22.1, and its local
+  connection service responds. Existing artwork, calibration and saved pairing
+  remain present. No drawing or calibration command was issued for validation.
+
+Long-duration connection testing on real printer hardware remains outstanding;
+the prior 72-hour idle and network-loss tests used simulated time and sockets.

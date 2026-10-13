@@ -1,6 +1,6 @@
 (function(){
  'use strict';const $=id=>document.getElementById(id);let token='',prepared=null,busy=false,lastTerminal='',quickWorking=false,lastSnapshot=null;
- let statusRequest=null,statusForced=false,mutationVersion=0;
+ let statusRequest=null,statusForced=false,mutationVersion=0,quickRequest=null;
  const local=location.protocol==='http:'&&location.hostname==='127.0.0.1';
  const controls=['lanConnect','lanProbe','lanRefresh','lanPrepare','lanUpload','lanStart','lanStop'];
  const quick=document.createElement('button');quick.id='lanQuickStart';quick.textContent='发送当前作品';quick.className='primary full spaced';$('lanStart').parentElement.before(quick);
@@ -11,7 +11,7 @@
  }
  function invalidate(event){prepared=null;if(!event?.detail?.derivedPaths)$('lanObserved').checked=false;$('lanJob').textContent='作品或参数已变化，请根据当前作品重新准备任务。';buttons();}
  async function api(action,data){if(data)mutationVersion++;if(['prepare','prepare-file'].includes(action)&&data?.state)data={...data,state:PenCore.taskState(data.state)};const r=await fetch('/api/'+action,data?{method:'POST',headers:{'Content-Type':'application/json','X-A1-Session':token},body:JSON.stringify(data)}:{}),j=await r.json();if(!r.ok)throw Error(j.error||'连接请求失败');return j;}
- function show(r){lastSnapshot=r;busy=r.busy===true||quickWorking;const p=r.printer,s=p?.state;
+ function show(r){mutationVersion++;lastSnapshot=r;busy=r.busy===true||quickWorking;const p=r.printer,s=p?.state;
   $('connectionBadge').textContent=p?.connected?(lastSnapshot?.device?.name||'打印机')+' 已连接':local?'本机连接版':'离线设计';
   $('lanStatus').textContent=s?`${p.connected?'已连接':'已断开'} · ${r.device?.ip||''} · 状态 ${s.gcode_state} · XYZ归零 ${Number.isInteger(s.home_flag)&&(s.home_flag&7)===7?'已报告':'未确认'} · 喷嘴 ${s.nozzle_temper}℃ / 热床 ${s.bed_temper}℃ · 速度倍率 ${s.spd_mag??'未知'}%`:'尚未连接打印机';
   if(r.device&&(!$('deviceForm')||$('deviceForm').hidden)){$('lanIP').value=r.device.ip;$('lanSerial').value=r.device.serial;}
@@ -45,17 +45,17 @@
  $('lanUpload').onclick=()=>attempt(async()=>{const r=await api('upload',{id:prepared.id,sha256:prepared.sha256});notice('已上传 '+r.filename+'，并逐字节读回验证；没有启动文件。');});
  $('lanStart').onclick=()=>attempt(async()=>{if(!prepared||!$('lanObserved').checked)throw Error('请先准备任务并核对现场');await api('start',{id:prepared.id,sha256:prepared.sha256,observedStart:true,clearRoute:true});prepared=null;lastTerminal='';busy=true;notice('开始发送小段绘图指令。请留在机器旁。');});
  quick.onclick=()=>attempt(async()=>{window.dispatchEvent(new CustomEvent('penconnectionerror',{detail:''}));
-  if(busy||!$('lanObserved').checked)throw Error('请先勾选现场确认');busy=true;quickWorking=true;buttons();
-  try{await PenStudio.ensureImagePaths();const state=PenStudio.getState(),profile=PenMachineUI.getProfile(),signature=JSON.stringify({state,profile}),fileMode=document.getElementById('taskMode')?.value==='file',s=await api('status');
+  if(busy||!$('lanObserved').checked)throw Error('请先勾选现场确认');busy=true;quickWorking=true;const request={cancelled:false};quickRequest=request;const checkCancelled=()=>{if(request.cancelled)throw Error('发送准备已取消');};buttons();
+  try{await PenStudio.ensureImagePaths();checkCancelled();const state=PenStudio.getState(),profile=PenMachineUI.getProfile(),signature=JSON.stringify({state,profile}),fileMode=document.getElementById('taskMode')?.value==='file',s=await api('status');checkCancelled();
    if(s.busy)throw Error('当前动作尚未完成');if(s.printer?.state?.spd_mag!==100)throw Error('请先恢复正常倍率，等待打印机确认100%；笔参数与坐标保留');if(document.getElementById('taskMode')?.value==='file'&&s.motionReference?.fileBlockedReason)throw Error(s.motionReference.fileBlockedReason==='storage_fault'?'存储卡读写异常，整图上传暂不可用；可改用边画边调整':s.motionReference.fileBlockedReason==='missing_sdcard'?'未识别到存储卡，可改用边画边调整或插入存储卡':'打印机有故障，请查看机身屏幕');if(!fileMode&&!s.position)throw Error('笔参数保留，机器坐标待恢复。请在绘图页的任务区点击“回到待机点”。');
-   const r=await api(fileMode?'prepare-file':'prepare',{state,profile,position:s.position,unchanged:true,clearRoute:true});$('lanJob').textContent=preparedSummary(r.prepared);
+   const r=await api(fileMode?'prepare-file':'prepare',{state,profile,position:s.position,unchanged:true,clearRoute:true});checkCancelled();$('lanJob').textContent=preparedSummary(r.prepared);
    if(signature!==JSON.stringify({state:PenStudio.getState(),profile:PenMachineUI.getProfile()}))throw Error('作品或参数刚刚改变，请重新点击发送');
    if(!$('lanObserved').checked)throw Error('现场确认已变化，请重新核对');
    if(fileMode!==(document.getElementById('taskMode')?.value==='file'))throw Error('发送方式已改变，请重新发送');
    await api(fileMode?'start-file':'start',{id:r.prepared.id,sha256:r.prepared.sha256,observedStart:true,clearRoute:true,unchanged:true});prepared=null;lastTerminal='';busy=true;notice(fileMode?'文件已上传，正在等待打印机实际开始执行。':'当前作品已开始发送。');
-  }catch(e){busy=false;throw e;}finally{quickWorking=false;}
+  }catch(e){busy=lastSnapshot?.busy===true;throw e;}finally{quickWorking=false;if(quickRequest===request)quickRequest=null;}
  });
- $('lanStop').onclick=()=>attempt(async()=>{const r=await api('stop',{});if(r?.run||r?.printer)show(r);notice(lastSnapshot?.fileTask?'已请求打印机停止完整任务；等待打印机确认。':'已请求停止：等待已发送指令完成，再抬笔返回待机位置。');});
+ $('lanStop').onclick=()=>attempt(async()=>{if(quickRequest)quickRequest.cancelled=true;$('lanObserved').checked=false;const r=await api('stop',{});if(r?.run||r?.printer)show(r);notice(lastSnapshot?.fileTask?'已请求打印机停止完整任务；等待打印机确认。':'已请求停止：等待已发送指令完成，再抬笔返回待机位置。');});
  $('lanObserved').onchange=buttons;
  for(const id of ['lanX','lanY','lanZ'])$(id).oninput=invalidate;
  $('machineDialog').addEventListener('input',e=>{if(e.target.id.startsWith('mc_'))invalidate();});window.addEventListener('penstudiochange',invalidate);window.addEventListener('penmachinechange',invalidate);

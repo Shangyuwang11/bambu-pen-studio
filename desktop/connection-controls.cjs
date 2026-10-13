@@ -23,7 +23,7 @@ function createConnectionControls({bridge,autoConnect,loadPair=async()=>null,loa
  return{
   pair(value){return exclusive(async()=>{const result=await bridge.connect(await pairingValue(value));preference(true);return result;});},
   async savedAccessCode(serial){const saved=await loadPair();return saved&&saved.serial===serial?saved.accessCode:'';},
-  reconnect(){return exclusive(async()=>{preference(true);autoConnect.resume();return autoConnect.connect(true);});},
+  reconnect(){return exclusive(async()=>{preference(true);autoConnect.resume();if(bridge.snapshot().printer?.connected)try{await bridge.refresh?.({force:true});}catch{}return autoConnect.connect(true);});},
   disconnect(){return exclusive(async()=>{preference(false);return bridge.disconnect();});},
   setAuto(enabled){if(typeof enabled!=='boolean')throw Error('自动连接选项无效');return exclusive(async()=>{preference(enabled);if(enabled){autoConnect.resume();return autoConnect.connect(true);}return bridge.snapshot();});}
  };

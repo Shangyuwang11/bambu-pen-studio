@@ -7,6 +7,7 @@ const {createAutoConnect}=require('./autoconnect.cjs');
 const {createConnectionControls}=require('./connection-controls.cjs');
 const {startConnectionLifecycle}=require('./connection-lifecycle.cjs');
 const {createPairStore}=require('./pair-store.cjs');
+const {withDeadline}=require('./deadline.cjs');
 app.setName('Bambu Pen');app.setAppUserModelId('local.a1pen.studio');
 const profileDirectory=require('./profile-directory.cjs').chooseProfileDirectory({home:app.getPath('home'),appData:app.getPath('appData'),testDirectory:process.env.A1_PEN_TEST_DATA});
 app.setPath('userData',profileDirectory.directory);
@@ -38,6 +39,7 @@ async function installUpdate(){
 const uiLabels={'文件':'File','保存作品':'Save project','退出':'Quit','编辑':'Edit','撤销':'Undo','重做':'Redo','剪切':'Cut','复制':'Copy','粘贴':'Paste','显示':'View','恢复大小':'Actual size','放大':'Zoom in','缩小':'Zoom out','全屏':'Full screen','帮助':'Help','换笔与桌面版使用说明':'Getting started','拓竹写字机':'Bambu Pen','外部资料链接':'External reference','复制链接':'Copy link','关闭':'Close','保存作品或导出文件':'Save project or export','当前仍在执行机器动作':'The printer is still moving','继续运行':'Keep running','停止后退出':'Stop and quit','正在上传或启动完整文件，请等启动确认后再关闭。':'Uploading or starting a file. Wait for startup confirmation before closing.','机器动作尚未结束，窗口保持打开，请查看状态。':'Motion has not finished. The window will remain open. Check printer status.','绘图会等待已发送指令确认完成，再抬笔返回待机位置；校准会在当前已发送动作结束后停住，请现场观察笔尖。':'Drawing waits for sent commands, then lifts the pen and returns to standby. Calibration stops after the current movement. Watch the pen at the printer.','未能完成关闭':'Could not close','Bambu Pen 启动失败':'Could not start Bambu Pen'};
 const nt=s=>uiLanguage==='en'?(uiLabels[s]||s):s;
 Object.assign(uiLabels,{'绘画或校准结束后才能更新。':'Finish drawing or calibration before updating.','请从下载的 EXE 启动软件后再更新。':'Start the downloaded EXE to enable in-app installation.'});
+Object.assign(uiLabels,{'保存尚未完成':'Saving has not finished','界面未能及时完成保存。':'The interface did not finish saving in time.','返回软件':'Return to app','重试保存':'Retry saving','不保存本次修改并退出':'Quit without saving recent changes','已有备份会保留；不保存退出可能丢失最近的修改。':'Existing backups are preserved. Quitting without saving may lose recent changes.','连接清理尚未完成，请重试关闭。':'Connection cleanup has not finished. Try closing again.'});
 const connectionEvents=[],motionEvents=[];
 function motionEvent(value){motionEvents.push(value);if(motionEvents.length>40)motionEvents.shift();try{atomic(path.join(app.getPath('userData'),'motion-log.json'),motionEvents);}catch{}}
 function connectionEvent(value){connectionEvents.push(value);if(connectionEvents.length>80)connectionEvents.shift();try{atomic(path.join(app.getPath('userData'),'connection-log.json'),connectionEvents);}catch{}}
@@ -74,7 +76,7 @@ async function start(){
  connectionControls=createConnectionControls({bridge,autoConnect,loadPair,load:()=>{try{return JSON.parse(fs.readFileSync(path.join(app.getPath('userData'),'connection-preferences.json'),'utf8'));}catch{return null;}},save:v=>atomic(path.join(app.getPath('userData'),'connection-preferences.json'),v)});
  try{await bridge.listen(Number(process.env.A1_PEN_PORT||8765));}catch(e){if(e.code==='EADDRINUSE')throw Error('本地连接端口已被占用。请先结束旧联网版的绘图并关闭它的连接服务，再打开桌面版。');throw e;}
  ipcMain.on('pen:bootstrap',event=>{try{trusted(event);event.returnValue={...initialData,language:uiLanguage,preferences:preferences.get(),dark:nativeTheme.shouldUseDarkColors,version:app.getVersion()};}catch{event.returnValue=null;}});
- ipcMain.handle('pen:language',(event,value)=>{trusted(event);if(!['zh-CN','en'].includes(value))throw Error('Invalid language');uiLanguage=value;preferences.patch({language:value});installMenu();win.setTitle('Bambu Pen');return value;});
+ ipcMain.handle('pen:language',(event,value)=>{trusted(event);if(!['zh-CN','en'].includes(value))throw Error('Invalid language');preferences.patch({language:value});uiLanguage=value;installMenu();win.setTitle('Bambu Pen');return value;});
  ipcMain.handle('pen:preferences',(event,value)=>{trusted(event);const next=preferences.patch(value);nativeTheme.themeSource=next.theme;applyWindowTheme();return next;});
  ipcMain.handle('pen:save',(event,value)=>{trusted(event);const data=validateWork(value);atomic(workFile(),data);initialData=data;return {saved:true};});
  ipcMain.handle('pen:update-status',event=>{trusted(event);return updateState();});
@@ -118,23 +120,28 @@ async function start(){
  if(uiState==='missing')throw Error('启动界面文件未能载入，请重新打开软件。已有配置保留。');
  uiPresented=true;connectionEvent({event:uiState==='ready'?'ui-ready':'ui-startup-error',at:Date.now()});
  const checkAutomatically=()=>{if(!preview&&!closing&&!quitting&&updater.snapshot().autoCheck)updater.check().catch(()=>{});};
- updateStartTimer=setTimeout(checkAutomatically,15000);updateStartTimer.unref();updateTimer=setInterval(checkAutomatically,6*60*60*1000);updateTimer.unref();
+ updateStartTimer=setTimeout(checkAutomatically,3000);updateStartTimer.unref();updateTimer=setInterval(checkAutomatically,6*60*60*1000);updateTimer.unref();
  if(!(process.env.A1_PEN_TEST_DATA&&process.env.A1_PEN_TEST_HIDE==='1')){win.show();win.focus();}
  powerTimer=setInterval(()=>{const busy=bridge.snapshot().localBusy;if(busy&&powerId===null)powerId=powerSaveBlocker.start('prevent-app-suspension');if(!busy&&powerId!==null){powerSaveBlocker.stop(powerId);powerId=null;}},1000);powerTimer.unref();
  if(process.env.A1_PEN_TEST_READY)fs.writeFileSync(process.env.A1_PEN_TEST_READY,JSON.stringify({pid:process.pid,origin:bridge.origin,version:app.getVersion(),sandbox:win.webContents.getLastWebPreferences().sandbox,userData:app.getPath('userData')}));
 }
 async function closeApp(){if(closing||quitting)return;closing=true;autoConnect?.pause();try{
- if(autoConnect?.status().connecting)await autoConnect.connect().catch(()=>{});
+ await withDeadline(()=>bridge?.abortConnect(),10000,nt('连接清理尚未完成，请重试关闭。'));
+ if(autoConnect?.status().connecting)await withDeadline(()=>autoConnect.connect().catch(()=>{}),10000,nt('连接清理尚未完成，请重试关闭。'));
  if(bridge?.snapshot().localBusy&&bridge.snapshot().fileTask){await showCloseMessage({message:nt('正在上传或启动完整文件，请等启动确认后再关闭。')});return;}
  if(bridge?.snapshot().busy&&!bridge.snapshot().autonomous){const choice=await showCloseMessage({type:'question',message:nt('当前仍在执行机器动作'),detail:nt('绘图会等待已发送指令确认完成，再抬笔返回待机位置；校准会在当前已发送动作结束后停住，请现场观察笔尖。'),buttons:[nt('继续运行'),nt('停止后退出')],defaultId:0,cancelId:0});if(choice.response!==1)return;await bridge.action('stop',{});for(let i=0;i<100&&bridge.snapshot().busy;i++)await new Promise(r=>setTimeout(r,500));if(bridge.snapshot().busy){await showCloseMessage({message:nt('机器动作尚未结束，窗口保持打开，请查看状态。')});return;}}
  // window.close() can dispose the renderer while the native close event is
  // being handled. Keep the last atomic backup and release the bridge in that
  // case; a live renderer's real save failure must still keep its window open.
- if(win&&!win.isDestroyed()&&!win.webContents.isDestroyed()){
-  try{await win.webContents.executeJavaScript('window.PenDesktop?.flush()');}
-  catch(e){if(!win.isDestroyed()&&!win.webContents.isDestroyed())throw e;}
+ while(win&&!win.isDestroyed()&&!win.webContents.isDestroyed()){
+  try{await withDeadline(()=>win.webContents.executeJavaScript('window.PenDesktop?.flush()'),5000,nt('界面未能及时完成保存。'));break;}
+  catch(e){
+   if(win.isDestroyed()||win.webContents.isDestroyed())break;
+   const choice=await showCloseMessage({type:'warning',message:nt('保存尚未完成'),detail:e.message+'\n'+nt('已有备份会保留；不保存退出可能丢失最近的修改。'),buttons:[nt('返回软件'),nt('重试保存'),nt('不保存本次修改并退出')],defaultId:0,cancelId:0});
+   if(choice.response===0)return;if(choice.response===2)break;
+  }
  }
- await bridge?.close();connectionLifecycle?.stop();releasePower();finishQuit();
+ await withDeadline(()=>bridge?.close(),5000,nt('连接清理尚未完成，请重试关闭。'));connectionLifecycle?.stop();releasePower();finishQuit();
  }catch(e){dialog.showErrorBox(nt('未能完成关闭'),e.message);}finally{closing=false;if(!quitting)autoConnect?.resume();}}
 
 function applyWindowTheme(){if(!win||win.isDestroyed())return;const dark=nativeTheme.shouldUseDarkColors;win.webContents.send('pen:theme',dark);win.setTitleBarOverlay({color:dark?'#171d20':'#f4f5f2',symbolColor:dark?'#e5eeea':'#283b35',height:42});win.setBackgroundColor(dark?'#171d20':'#f4f5f2');}

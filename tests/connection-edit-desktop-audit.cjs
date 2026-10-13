@@ -13,6 +13,11 @@ async function openEditor(){await page.evaluate(()=>PenNativeShell.go('devices')
  fs.writeFileSync(path.join(data,'printer.enc.json'),JSON.stringify({ip:pair.ip,serial:pair.serial,model:pair.model,encrypted}));
  await page.evaluate(()=>PenNativeShell.refreshMeta());assert.equal(await page.evaluate(()=>PenDesktopAPI.savedAccessCode('OTHERPRINTER1')),'');
  assert(!JSON.stringify(await page.evaluate(()=>PenDesktopAPI.meta())).includes(pair.accessCode));
+ // Legacy saved printers can reach model selection during background startup,
+ // without the user first opening the connection editor.
+ await page.evaluate(async()=>{const m=await PenDesktopAPI.meta();delete m.printer.model;m.autoConnect={...m.autoConnect,phase:'model_required',connecting:false,modelOptions:['a1-mini','a1']};window.dispatchEvent(new CustomEvent('penpairing',{detail:m}));});
+ await page.waitForFunction(()=>document.getElementById('deviceModelDialog').open);await page.waitForFunction(()=>document.getElementById('lanCode').value.length===8);assert.equal(await page.locator('#lanSerial').inputValue(),pair.serial);assert.equal(await page.locator('#deviceModel').inputValue(),'auto');
+ await page.locator('#deviceModelCancel').click();await page.locator('#deviceCancel').click();assert.equal(await page.locator('#deviceModelDialog').evaluate(n=>n.open),false);await page.evaluate(()=>PenNativeShell.refreshMeta());
  await openEditor();await page.waitForFunction(()=>document.querySelector('#lanCode').value.length===8);assert.equal(await page.locator('#lanCode').getAttribute('type'),'password');assert.equal(await page.locator('#deviceModel').inputValue(),pair.model);
  await page.locator('#deviceShowCode').click();assert.equal(await page.locator('#lanCode').getAttribute('type'),'text');assert.equal(await page.locator('#lanCode').inputValue(),pair.accessCode);
  await page.locator('#deviceShowCode').click();await page.locator('#lanCode').fill('');await page.locator('#deviceShowCode').click();await page.waitForFunction(()=>document.querySelector('#lanCode').value.length===8);assert.equal(await page.locator('#lanCode').inputValue(),pair.accessCode);

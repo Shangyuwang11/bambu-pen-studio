@@ -10,39 +10,47 @@ class Printer extends EventEmitter {
   if(this.socket)throw Error('Already initialized');
   const ready=this.waitFor(()=>this.connected&&this.full&&!!this.version,20000);
   ready.catch(()=>{});
+  try{
   this.socket=tls.connect({...this.options,port:8883,rejectUnauthorized:true,minVersion:'TLSv1.2'},()=>{
+   if(this.failure||this.socket.destroyed)return;
    const payload=Buffer.concat([utf('a1pen-'+crypto.randomBytes(8).toString('hex')),utf('bblp'),utf(code)]);
-   this.socket.write(packet(0x10,Buffer.concat([utf('MQTT'),Buffer.from([4,0xC2,0,30]),payload])));code='';
+   try{this.socket.write(packet(0x10,Buffer.concat([utf('MQTT'),Buffer.from([4,0xC2,0,30]),payload])));}catch(e){this.fail(e);}finally{code='';}
   });
   this.socket.on('data',b=>{try{this.receive(b);}catch(e){this.fail(e);}});this.socket.on('error',e=>this.fail(e));this.socket.on('close',()=>this.fail(Error('Printer connection closed')));
   this.ping=setInterval(()=>this.heartbeat(),10000);
+  }catch(e){this.fail(e);}
   try{await ready;return this.snapshot();}catch(e){this.close();throw e;}
  }
- fail(e){this.connected=false;clearInterval(this.ping);for(const p of this.pending.values()){clearTimeout(p.timer);p.reject(e);}this.pending.clear();this.emit('failure',e);if(this.socket&&!this.socket.destroyed)this.socket.destroy();}
+ fail(e){if(this.failure)return;this.failure=e;this.connected=false;clearInterval(this.ping);for(const p of this.pending.values()){clearTimeout(p.timer);p.reject(e);}this.pending.clear();if(this.socket&&!this.socket.destroyed)this.socket.destroy();this.emit('failure',e);}
  close(){this.fail(Error('Disconnected'));}
  heartbeat(now=Date.now()){
   if(!this.connected)return;
   if(now-this.lastPacketAt>45000){const e=Error('打印机连接已失去响应，正在等待重新连接');e.code='ETIMEDOUT';this.fail(e);return;}
-  this.socket.write(Buffer.from([0xc0,0]));
+  try{this.socket.write(Buffer.from([0xc0,0]));}catch(e){this.fail(e);}
  }
  snapshot(){const now=Date.now();return {connected:this.connected,tlsVerified:this.socket?.authorized===true,full:this.full,ageMs:now-this.lastStatus,fieldAgeMs:Object.fromEntries(Object.entries(this.fieldTime).map(([key,time])=>[key,now-time])),state:{...this.state},version:this.version};}
  async fresh({force=false,fields=[]}={}){
   if(!this.connected)throw Error('Printer not connected');
   if(!Array.isArray(fields)||fields.some(k=>!KEYS.includes(k)&&k!=='hms'))throw Error('Invalid printer status fields');
-  if(force||fields.length){
-   const before=this.statusRevision,check=()=>this.full&&this.statusRevision>before&&fields.every(k=>this.fieldRevision[k]>before);
-   const pending=this.waitFor(check,8000);pending.catch(()=>{});
-   try{this.publish('pushing','pushall',{version:1,push_target:1});return await pending;}catch(e){this.fail(e);throw e;}
-  }
-  if(this.full&&Date.now()-this.lastStatus<5000)return this.snapshot();
-  if(this.refreshing)return this.refreshing;
-  const before=this.lastStatus;
-  this.refreshing=this.waitFor(()=>this.full&&this.lastStatus>before,8000);
-  const pending=this.refreshing;pending.catch(()=>{});
-  try{this.publish('pushing','pushall',{version:1,push_target:1});return await pending;}catch(e){this.fail(e);throw e;}finally{this.refreshing=null;}
+  if(!force&&!fields.length&&this.full&&Date.now()-this.lastStatus<5000)return this.snapshot();
+  // UI polling, the wake handler and manual refresh can overlap. Share an
+  // identical observation instead of flooding pushall and timing each one out.
+  this.refreshes??=new Map();const key=[...new Set(fields)].sort().join(',');
+  if(this.refreshes.has(key))return this.refreshes.get(key);
+  const before=this.statusRevision;
+  const pending=Promise.resolve().then(async()=>{
+   const observed=this.waitFor(()=>this.full&&this.statusRevision>before&&fields.every(k=>this.fieldRevision[k]>before),8000);observed.catch(()=>{});
+   try{this.publish('pushing','pushall',{version:1,push_target:1});return await observed;}
+   catch(e){
+    // Missing optional fields is not a broken TCP session. The caller still
+    // fails its strict observation, while a responding printer stays connected.
+    if(this.statusRevision<=before)this.fail(e);throw e;
+   }
+  }).finally(()=>{if(this.refreshes.get(key)===pending)this.refreshes.delete(key);});
+  this.refreshes.set(key,pending);return pending;
  }
  idle({homed=false,operation='motion',thermal='cold'}={}){const s=this.snapshot();if(!s.connected||!s.full||s.ageMs>10000)throw Error('Printer status is missing or stale');const acknowledgedCancellation=s.state.gcode_state==='FAILED'&&s.state.print_error===0&&Array.isArray(s.state.hms)&&Policy.blockingHms(s.state).length===0&&this.cancelledTaskIsIdle?.()===true;if(!Policy.taskIdle(s.state)&&!acknowledgedCancellation)throw Error('Printer is busy');Policy.assertOperation(s.state,operation);if(s.state.nozzle_target_temper!==0||s.state.bed_target_temper!==0)throw Error('打印机仍设定了加热目标，请先关闭喷嘴和热床加热');if(!['cold','bare','observed'].includes(thermal))throw Error('未知温度检查模式');if(!Number.isFinite(s.state.nozzle_temper)||!Number.isFinite(s.state.bed_temper))throw Error('尚未收到有效的喷嘴与热床温度');if(thermal==='cold'&&(s.state.nozzle_temper>50||s.state.bed_temper>45))throw Error('加热已关闭；喷嘴 '+Math.round(s.state.nozzle_temper)+'°C、热床 '+Math.round(s.state.bed_temper)+'°C。装夹与绘画前请等喷嘴降至 50°C、热床降至 45°C 以下；已有校准参数保留');if(homed&&(!Number.isInteger(s.state.home_flag)||(s.state.home_flag&7)!==7)&&this.retainedPositionConfirmed?.()!==true)throw Error('XYZ homing is not confirmed');return s;}
- waitFor(predicate,ms){return new Promise((resolve,reject)=>{let timer;const clean=()=>{clearTimeout(timer);this.off('update',check);this.off('failure',bad);};const check=()=>{if(predicate()){clean();resolve(this.snapshot());}};const bad=e=>{clean();reject(e);};timer=setTimeout(()=>bad(Error('Printer observation timed out')),ms);this.on('update',check);this.on('failure',bad);check();});}
+ waitFor(predicate,ms){if(this.failure)return Promise.reject(this.failure);return new Promise((resolve,reject)=>{let timer;const clean=()=>{clearTimeout(timer);this.off('update',check);this.off('failure',bad);};const check=()=>{if(predicate()){clean();resolve(this.snapshot());}};const bad=e=>{clean();reject(e);};timer=setTimeout(()=>bad(Error('Printer observation timed out')),ms);this.on('update',check);this.on('failure',bad);check();});}
  publish(section,command,fields={},ack=false,ackTimeoutMs=12000){
   if(!this.connected)throw Error('Printer not connected');
   const allowed={info:['get_version'],pushing:['pushall'],print:['gcode_line','gcode_file','project_file','print_speed','stop','clean_print_error'],system:['uiop']};if(!allowed[section]?.includes(command))throw Error('Command not supported');
@@ -77,6 +85,7 @@ class Printer extends EventEmitter {
  }
  receive(b){this.input=Buffer.concat([this.input,b]);if(this.input.length>2*1024*1024)throw Error('MQTT frame budget exceeded');while(this.input.length>=2){let n=0,m=1,p=1,done=false;for(let i=0;i<4;i++){if(p>=this.input.length)return;const d=this.input[p++];n+=(d&127)*m;if(!(d&128)){done=true;break;}m*=128;}if(!done||n>1024*1024)throw Error('Invalid MQTT length');if(this.input.length<p+n)return;const h=this.input[0],body=this.input.subarray(p,p+n);this.input=this.input.subarray(p+n);this.handle(h,body);}}
  handle(h,b){
+  if(this.failure)return;
   this.lastPacketAt=Date.now();
   const type=h>>4;
   if(type===13){if(b.length)throw Error('Invalid MQTT ping response');return;}
@@ -85,7 +94,7 @@ class Printer extends EventEmitter {
   if(type!==3)return;
   if(b.length<2)throw Error('Malformed MQTT message');const n=b.readUInt16BE(0);let p=n+2;if(p>b.length)throw Error('Invalid topic');const topic=b.subarray(2,p).toString();if(((h>>1)&3)===1){if(p+2>b.length)throw Error('Missing packet id');this.socket.write(packet(0x40,b.subarray(p,p+2)));p+=2;}else if((h>>1)&3)throw Error('Unexpected MQTT QoS');
   if(topic!=='device/'+this.options.servername+'/report')return;const j=JSON.parse(b.subarray(p).toString());
-  if(j.info?.command==='get_version')this.version=(j.info.module||[]).map(m=>({name:m.name,sw_ver:m.sw_ver,hw_ver:m.hw_ver,project_name:m.project_name}));
+  if(j.info?.command==='get_version')this.version=(Array.isArray(j.info.module)?j.info.module:[]).filter(m=>m&&typeof m==='object').map(m=>({name:m.name,sw_ver:m.sw_ver,hw_ver:m.hw_ver,project_name:m.project_name}));
   if(j.print?.command==='push_status'){
    const v=j.print,now=Date.now(),revision=++this.statusRevision;for(const k of KEYS)if(Object.hasOwn(v,k)){this.state[k]=v[k];this.fieldRevision[k]=revision;this.fieldTime[k]=now;}if(Array.isArray(v.hms)){this.state.hms=v.hms.map(x=>({attr:x.attr,code:x.code}));this.fieldRevision.hms=revision;this.fieldTime.hms=now;}if(v.msg===0)this.full=true;this.lastStatus=now;
   }

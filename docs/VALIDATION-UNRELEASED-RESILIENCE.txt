@@ -1,0 +1,72 @@
+Bambu Pen — unreleased resilience audit
+Date: 2026-10-13
+Version remains 0.22.0; these changes have not been packaged or published.
+
+Connection and shutdown
+- The main process checks live status every 30 seconds while idle or running
+  an autonomous file, even when the renderer is hidden. Sleep pauses checks;
+  wake verifies a new status report. Motion controlled by the computer is not
+  interrupted by this background check. Existing reconnect backoff is retained.
+- Ordinary polling no longer requires optional task-name/stage fields to be
+  repeated. Strict motion observations still require their requested fresh
+  fields. An incomplete observation rejects without closing a transport that
+  is still receiving status; no new status at all expires the connection.
+- Concurrent identical refresh requests share an observation. Socket error /
+  close races invalidate once, late packets cannot revive a closed connection,
+  old session callbacks cannot change the replacement session, and heartbeat
+  write failures are handled. Malformed version-module entries are filtered.
+- Shutdown can cancel a pending login or connection verification. Partial HTTP
+  requests no longer hold the local server open indefinitely. New work is
+  rejected once the server begins shutting down.
+- Native window close bounds renderer saving at 5 seconds. On save failure or
+  timeout, the user may return, retry, or explicitly quit without recent edits.
+  Existing backups remain; a save failure never silently discards edits.
+  Machine action / file-upload close guards remain in effect.
+
+Other reproduced failure paths fixed
+- Stop during deferred readiness, image conversion or FTP preparation cannot
+  be overwritten by a late continuation that starts the cancelled drawing.
+  Competing bridge actions are reserved before their first asynchronous wait.
+- A failed pen-width or mount save retains the active and saved parameters.
+  Competing edits are rejected while preset persistence is pending.
+- Late HTTP status cannot overwrite a newer native connection/calibration UI.
+- Language and update-check preferences are committed only after persistence
+  succeeds; failed writes restore the displayed saved preference.
+- Unlimited slider ranges do not expand underneath a held pointer / key.
+
+Verification
+- All 21 suites in scripts/test.cjs passed with Chromium and Electron enabled.
+- New suites: async-boundaries, adversarial-ui, image-edge, geometry-scenarios,
+  reconnect-soak, window-close. The existing startup-update suite also passes.
+- Real MQTT packet parser with fake TLS sockets: 25 overlapping refreshes
+  produce one request; missing fields, malformed modules, duplicate failures,
+  stale callbacks, write failures, aborted login and reconnect are exercised.
+- Virtual clock: 72 idle hours in 30-minute increments, 12 Wi-Fi outages,
+  status loss while pings still work, five-hour sleep/wake, offline retries,
+  manual disconnect, and renderer-independent status checks. No printer motion
+  command is allowed by this simulator. This is not a 72-hour hardware soak.
+- Real Electron native close event: stalled save, repeated close clicks,
+  return-to-app, subsequent successful save-and-close, explicit quit after a
+  failed save, existing backup preservation. All use isolated temporary data.
+- Stop tested during readiness for streamed and complete-file jobs; duplicate
+  prepare/refine and cancellation at FTP connect/login/upload/finish. Next job
+  can prepare and saved calibration remains after cancellation before motion.
+- UI tests cover failed and delayed preset/language writes, stale status,
+  invalid image type/decode/dimensions, and late worker responses after reopening.
+- 450 seeded layouts across A1 mini, A1 and P1S: 412 drawable, 38 fully clipped,
+  9,981 points checked for paper/margin/pen-width and nozzle-envelope bounds.
+- Existing model, upload/readback, sequential-job, cancellation, data migration,
+  feedback privacy, encrypted pairing, workspace and startup-update tests pass.
+- After final connection-cancellation cleanup, reconnect, connection-edit and
+  asynchronous-boundary suites were rerun successfully. The native close suite
+  ran on the final shutdown code. Syntax checks passed for 33 JavaScript files;
+  git diff --check reported no whitespace errors.
+
+Scope and limits
+- No real printer connection or motion commands were issued by this audit.
+  Real firmware / Wi-Fi behavior still needs use on the user's hardware; this
+  audit does not establish that every possible bug has been eliminated.
+- Personal data was not modified. Only the local connection event log was read
+  for context; credentials and project content were not exported.
+- The running installed app and GitHub release were not replaced. No version
+  bump, EXE build, push, release upload, restart or computer shutdown occurred.

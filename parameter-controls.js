@@ -12,13 +12,21 @@
   const slider=document.createElement('input');slider.id=sliderId;slider.type='range';slider.min=min;slider.step=step;
   slider.setAttribute('aria-label',(label||input.getAttribute('aria-label'))+'滑块');
   input.before(row);row.append(slider,input);
+  let adjusting=false;
   const sync=()=>{
    const value=input.valueAsNumber,valid=Number.isFinite(value);
-   slider.max=max??Math.max(quickMax,valid?Math.min(Number.MAX_VALUE,value*1.25||quickMax):quickMax);
+   if(!adjusting)slider.max=max??Math.max(quickMax,valid?Math.min(Number.MAX_VALUE,value*1.25||quickMax):quickMax);
    // Preserve a typed value and never write the slider's rounded value back.
    slider.value=valid?value:min;slider.disabled=input.disabled;
    slider.setAttribute('aria-valuetext',input.value===''&&optional?'自动':input.value);
   };
+  // Expanding the scale under a held pointer turns one drag into an ever
+  // increasing value. Resize shortcuts only between user gestures.
+  const release=()=>{if(adjusting){adjusting=false;sync();}};
+  slider.addEventListener('pointerdown',()=>{adjusting=true;});
+  window.addEventListener('pointerup',release);window.addEventListener('pointercancel',release);
+  slider.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','PageUp','PageDown'].includes(e.key))adjusting=true;});
+  slider.addEventListener('keyup',release);slider.addEventListener('blur',release);
   slider.addEventListener('input',()=>{input.value=slider.value;input.dispatchEvent(new Event('input',{bubbles:true}));onInput?.(input);});
   slider.addEventListener('change',()=>input.dispatchEvent(new Event('change',{bubbles:true})));
   input.addEventListener('input',sync);input.addEventListener('change',sync);

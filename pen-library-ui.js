@@ -49,7 +49,7 @@
  async function saveMount(profile){
   if(pending||status?.busy)throw Error('当前动作尚未完成');const s=selected();if(!s||!M.machineMatch(s.profile.machine,profile.machine))return false;
   const updated={...s.profile};for(const key of ['refX','refY','machineX','machineY','xSign','ySign','xyReference'])updated[key]=profile[key];
-  const next=P.validate({...s,profile:updated,savedAt:Date.now()});await persist(list().map(p=>p.id===s.id?next:p),s.id);return true;
+  const next=P.validate({...s,profile:updated,savedAt:Date.now()});pending=true;render();try{await persist(list().map(p=>p.id===s.id?next:p),s.id);return true;}finally{pending=false;render();}
  }
  async function saveWidth(width){
   if(pending||status?.busy)throw Error('当前动作尚未完成');
@@ -58,7 +58,7 @@
   if(s&&!M.machineMatch(s.profile.machine,PenStudio.getSettings().machine))throw Error('请先选择当前机型的校准配置');
   if(!s){PenStudio.setPenSettings({width});return false;}
   const next=P.validate({...s,penSettings:{...(s.penSettings||settings),width},savedAt:Date.now()});
-  pending=true;render();try{PenStudio.setPenSettings({width});await persist(list().map(p=>p.id===s.id?next:p),s.id);return true;}finally{pending=false;render();}
+  pending=true;render();try{await persist(list().map(p=>p.id===s.id?next:p),s.id);PenStudio.setPenSettings({width});return true;}finally{pending=false;render();}
  }
  window.PenProfilesUI={saveWidth,saveMount,saveReference,selected,persistentProfile,render,dirty,list,choose};const startup=selected();if(startup&&signature(current())===signature(startup.profile)){PenMachineUI.setProfile(startup.profile,true);if(startup.penSettings)PenStudio.setPenSettings({width:startup.penSettings.width});}persistCurrentPolicy();PenSimpleUI.refreshList(selected()?.id);window.addEventListener('penconnection',e=>{status=e.detail;render();const s=selected();if(!restored&&!pending&&s&&current().confirmed&&status?.printer?.connected&&!status.busy&&!status.wizard&&signature(current())===signature(s.profile)){restored=true;selectNow(s.id).catch(err=>note(err.message));}});window.addEventListener('penmachinechange',()=>{persistCurrentPolicy();render();});window.addEventListener('penstudiochange',render);render();
 })();

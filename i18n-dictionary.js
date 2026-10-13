@@ -1,5 +1,14 @@
 /* Offline UI translations. Artwork and profile names are not translated. */
 globalThis.PenTranslations={
+  "发送准备已取消": "Send preparation cancelled",
+  "已取消待执行操作；没有启动新的移动或绘画": "Pending action cancelled; no new movement or drawing was started",
+  "准备已取消，位置与校准参数保留": "Preparation cancelled; position and calibration retained",
+  "语言设置未保存：": "Language setting was not saved: ",
+  "选择打印机型号": "Select your printer model",
+  "已收到打印机响应，但固件没有提供具体型号。请选择对应的打印机继续连接。": "The printer responded without a specific model. Select your printer to continue connecting.",
+  "已收到打印机响应，但固件没有提供具体型号。选择一次后会记住，下次自动连接。": "The printer responded without a specific model. Select it once; it will be remembered for automatic connections.",
+  "请选择机型": "Select a model",
+  "选择打印机型号后即可连接。": "Select your printer model to connect.",
   "拓竹写字机": "Bambu Pen",
   "绘图工作区": "Drawing workspace",
   "主导航": "Main navigation",

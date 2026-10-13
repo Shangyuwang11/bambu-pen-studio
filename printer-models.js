@@ -13,7 +13,7 @@
  function point(p,model='a1-mini'){const m=get(model),out={};for(const[k,max]of [['x',m.w],['y',m.h],['z',m.z]]){if(!Number.isFinite(p?.[k])||p[k]<0||p[k]>max)throw Error(m.name+' '+k.toUpperCase()+' 坐标超出 0–'+max+' mm');out[k]=p[k];}return out;}
  function detect(modules,selected='auto'){
   if(selected!=='auto'&&!supported(selected))throw Error('请选择 A1 mini、A1 或 P1S');
-  const rows=Array.isArray(modules)?modules:[],controllers=rows.filter(m=>['esp32','ota'].includes(m.name));
+  const rows=(Array.isArray(modules)?modules:[]).filter(m=>m&&typeof m==='object'),controllers=rows.filter(m=>['esp32','ota'].includes(m.name));
   const projects=[...new Set(controllers.map(m=>String(m.project_name||'').trim().toUpperCase()).filter(Boolean))];
   const known=projects.map(id=>Object.values(specs).find(m=>m.project===id)).filter(Boolean);
   if(new Set(known.map(m=>m.id)).size>1)throw Error('打印机返回的机型信息不一致，请刷新后重连');
@@ -22,7 +22,11 @@
   // AP05 is shared by A1 and A1 mini: hardware alone must never choose the bed.
   const esp=rows.find(m=>m.name==='esp32');
   if(selected!=='auto'&&esp?.hw_ver===get(selected).hardware){const m=get(selected);return{model:m.id,source:'selected',name:m.name,tested:m.tested};}
-  throw Error(esp?'打印机未返回完整机型，请在连接页面选择机器的实际型号后重试':'无法识别此打印机；目前支持 A1 mini、A1、P1S');
+  const choices=Object.values(specs).filter(m=>m.hardware===esp?.hw_ver).map(m=>m.id);
+  if(choices.length){const error=Error('[MODEL_SELECTION_REQUIRED:'+choices.join(',')+'] 打印机未返回完整机型，请选择实际型号继续连接');error.code='MODEL_SELECTION_REQUIRED';error.modelOptions=choices;throw error;}
+  throw Error('无法识别此打印机；目前支持 A1 mini、A1、P1S');
  }
- root.PenPrinterModels={specs,supported,get,point,detect};if(typeof module!=='undefined')module.exports=root.PenPrinterModels;
+ // Electron keeps an IPC error's message but not its custom properties.
+ function selectionOptions(error){const match=/\[MODEL_SELECTION_REQUIRED:([a-z0-9,-]+)\]/.exec(String(error?.message||error||''));return match?match[1].split(',').filter(supported):[];}
+ root.PenPrinterModels={specs,supported,get,point,detect,selectionOptions};if(typeof module!=='undefined')module.exports=root.PenPrinterModels;
 })(typeof window!=='undefined'?window:globalThis);

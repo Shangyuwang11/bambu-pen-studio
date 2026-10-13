@@ -4,7 +4,7 @@ const Models=require('../printer-models.js'),{Printer}=require('../bridge/mqtt.c
 const {chromium}=require(process.env.A1_PEN_PLAYWRIGHT||'playwright');
 class Fake extends EventEmitter {
  constructor(model){super();const m=Models.get(model);this.version=[{name:'esp32',hw_ver:m.hardware,project_name:m.project}];this.connected=true;this.state={gcode_state:'IDLE',gcode_file:'',subtask_name:'',home_flag:7,spd_mag:100,print_error:0,hms:[],mc_percent:0,mc_remaining_time:0,sdcard:true,nozzle_temper:25,nozzle_target_temper:0,bed_temper:25,bed_target_temper:0};this.commands=[];}
- async connect(){}async fresh(){return this.snapshot();}close(){this.connected=false;}
+ async connect(){this.connected=true;}async fresh(){return this.snapshot();}close(){this.connected=false;}
  snapshot(){return{connected:this.connected,full:true,ageMs:0,state:{...this.state}};}
  idle(o){return Printer.prototype.idle.call({...this,full:true,ageMs:0},o);}
  async publish(...v){this.commands.push(v);throw Error('UI test must never issue machine commands');}
@@ -31,6 +31,22 @@ class Fake extends EventEmitter {
    await page.screenshot({path:path.join(__dirname,'..','test-output',model+'-connection.png')});
    assert.deepEqual(p.commands,[]);assert.deepEqual(errors,[]);console.log('PASS '+model+' actual UI: pairing, detected model, canvas match, calibration enabled, speed caps and bilingual notice');
   }finally{await context.close();await b.close();}
- }}finally{await browser.close();}
+ }
+ for(const model of ['a1','a1-mini','p1s']){
+  const p=new Fake(model);delete p.version[0].project_name;let saved;
+  const b=createBridge({printerFactory:()=>p,onCredentials:v=>{saved=v;}});await b.listen(0);const page=await browser.newPage();
+  try{
+   await page.goto(b.origin);await page.waitForFunction(()=>document.documentElement.dataset.uiBoot==='ready');await page.evaluate(()=>PenNativeShell.go('devices'));await page.locator('#deviceAdd').click();
+   await page.locator('#lanIP').fill('192.168.240.10');await page.locator('#lanSerial').fill('TESTMODEL0001');await page.locator('#lanCode').fill('12345678');await page.locator('#devicePair').click();await page.waitForFunction(()=>document.getElementById('deviceModelDialog').open);
+   assert.deepEqual(await page.locator('.device-model-choice').evaluateAll(nodes=>nodes.map(n=>n.dataset.model)),model==='p1s'?['p1s']:['a1-mini','a1']);assert.equal(await page.locator('#deviceError').isVisible(),false);
+   await page.locator('#deviceModelCancel').click();assert.equal(await page.locator('#lanCode').inputValue(),'12345678');assert.equal(await page.locator('#lanSerial').inputValue(),'TESTMODEL0001');
+   await page.evaluate(()=>PenI18n.setLanguage('en'));await page.locator('#devicePair').click();await page.waitForFunction(()=>document.getElementById('deviceModelDialog').open);await page.waitForFunction(()=>document.getElementById('deviceModelTitle').textContent==='Select your printer model');
+   await page.screenshot({path:path.join(__dirname,'..','test-output',model+'-model-picker.png')});await page.locator('.device-model-choice[data-model="'+model+'"]').click();await page.waitForFunction(()=>document.querySelector('#deviceState').dataset.connected==='true');
+   assert.equal(saved.model,model);assert.equal(saved.accessCode,'12345678');assert.deepEqual(p.commands,[]);
+   await b.disconnect();await b.connect(saved);assert.equal(b.snapshot().device.model,model);assert.deepEqual(p.commands,[]);
+   console.log('PASS '+model+' missing model: picker, cancel, credentials retained, bilingual, one-click connect, saved model reconnect, no motion');
+  }finally{await page.close();await b.close();}
+ }
+ }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
 

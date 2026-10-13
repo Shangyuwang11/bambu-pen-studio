@@ -1,0 +1,27 @@
+Bambu Pen 0.22.1
+
+中文
+- 修复长时间空闲后的状态刷新和重连：后台定期检查实时状态，休眠唤醒后重新确认连接；缺少可选状态字段不会再误断开仍在响应的打印机。
+- 修复窗口关闭卡住：清理连接不再无限等待，保存失败或超时可重试、返回软件，或明确选择不保存最近修改后退出。
+- 修复准备任务时点击停止，异步操作完成后仍可能继续发送的问题。
+- 修复保存失败时笔宽、笔架偏移或语言设置与已保存内容不一致，以及旧状态覆盖新状态的问题。
+- A1 等机型信息不完整时提供型号选择，保留已输入的连接资料；保存选择后用于自动连接。
+- 启动时自动检查新版本并显示提示；不会自动下载安装或重启。修复拖动滑块时刻度变化造成的数值跳动。
+- 保留现有打印机资料、作品和校准配置。安装包不包含个人数据。
+
+English
+- Improved idle connection recovery, background status checks and sleep/wake handling. Missing optional status fields no longer disconnect a responding printer.
+- Fixed shutdown waits and added clear save-failure / timeout choices.
+- Cancelled preparation cannot resume sending after delayed work finishes.
+- Failed saves preserve active nib width, mount offsets and preferences; late status responses cannot overwrite newer connection state.
+- Incomplete model reports offer a printer selection while keeping entered credentials, and remember the choice for reconnection.
+- Startup update checks now show a visible notice. Downloads and restarts remain user-controlled. Slider scales stay stable during a drag.
+- Existing printer details, artwork and calibration profiles remain in the same local data directory. No personal data is bundled.
+
+Validation / 验证
+21 source test suites passed, including simulated A1 mini / A1 / P1S workflows, 450 layout scenarios, virtual-time idle / network interruptions and actual desktop UI checks. The packaged Windows EXE also passed launch, save, close and restart checks with isolated data.
+
+21 组源码测试及实际 EXE 启动、保存、关闭、重开验证通过。长时间空闲测试使用模拟时间和连接；尚未完成实机长期连接验证。A1 / P1S 仍为实验性支持，尚未进行实机验证。
+
+Windows 10/11 x64. Download the EXE below or use Settings > Updates in a compatible earlier version.
+Windows 10/11 x64。下载下方 EXE，或在支持更新功能的旧版本中打开「设置 → 更新」。

@@ -1,0 +1,41 @@
+Bambu Pen — unreleased startup and model-selection fixes
+Date: 2026-10-13
+
+Behavior
+- Startup checks for updates after the window loads (3 seconds), when the
+  existing automatic-check preference is enabled. A new stable version shows
+  a visible, non-modal notice with View update and Later actions.
+- Later dismisses that version for this app session. A different new version
+  can notify again. No automatic download, installation or restart occurs.
+- When a supported controller omits project_name, pairing offers the matching
+  printer models instead of ending with a technical error. AP05 cannot by
+  itself distinguish A1 from A1 mini; the UI offers both, without guessing.
+- Choosing a model continues the connection with the same credentials. The
+  desktop saves the model for future automatic connections. Cancel preserves
+  the form, including the access code. Unknown/unsupported reported models and
+  explicit model conflicts remain rejected.
+- Background reconnection pauses when model selection is needed, opens the
+  picker once, and does not repeatedly reconnect or reopen the picker.
+
+Verification
+- All 15 suites in scripts/test.cjs passed, including actual Chromium and
+  Electron UI coverage with isolated temporary profiles.
+- Missing-project responses for A1, A1 mini and P1S: model options, cancel,
+  preserved inputs, English translation, selection -> successful connection,
+  remembered model -> successful reconnection; zero motion commands.
+- Existing encrypted desktop credentials: background model-selection event
+  opens the form with the saved serial/code; cancel does not reopen it.
+- Real Electron startup timer with mocked GitHub responses: check without
+  opening Settings, visible notification, per-version/session dismissal,
+  bilingual labels, Settings link, persisted disabled preference, enabled
+  preference on next launch, quiet offline failure, metadata-only requests.
+- Screenshots reviewed for the model picker and update notification.
+- Git diff whitespace and JavaScript syntax checks passed.
+
+Scope and limits
+- Printer responses are simulated; no A1 or P1S physical hardware validation
+  was performed. No real printer commands were sent.
+- Source changes only. Version remains 0.22.0. No EXE packaging, installation,
+  GitHub push or release replacement was performed for these new changes.
+- Update comparison requires a newer version number. Replacing assets under
+  the same version does not count as a new version notification.
