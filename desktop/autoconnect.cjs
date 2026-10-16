@@ -16,9 +16,10 @@ function createAutoConnect({bridge,loadPair,now=Date.now,delay=30000,onEvent=()=
    phase='credentials';const pair=await loadPair();
    if(!pair){phase='unpaired';error='';return bridge.snapshot();}
    if(!enabled||!userEnabled)return bridge.snapshot();
+   Models.identity(pair.model);
    attempts++;lastAttemptAt=now();phase='connecting';emit('connect-start');
    await bridge.connect(pair);error='';phase='connected';lastSuccessAt=now();emit('connect-ok');return bridge.snapshot();
-  }).catch(e=>{phase=phase==='credentials'?'credential_error':Models.selectionOptions(e).length?'model_required':'waiting';error=e.message;emit(phase==='credential_error'?'credential-error':'connect-error',/^[A-Z0-9_]+$/.test(e.code||'')?e.code:'UNAVAILABLE');if(force)throw e;return bridge.snapshot();}).finally(()=>{pending=null;next=now()+delay;});
+  }).catch(e=>{phase=Models.selectionOptions(e).length?'model_required':phase==='credentials'?'credential_error':'waiting';error=e.message;emit(phase==='credential_error'?'credential-error':'connect-error',/^[A-Z0-9_]+$/.test(e.code||'')?e.code:'UNAVAILABLE');if(force)throw e;return bridge.snapshot();}).finally(()=>{pending=null;next=now()+delay;});
   return pending;
  }
  return {connect,status,setUserEnabled(value){userEnabled=value===true;if(userEnabled){next=0;}else if(!pending){phase='paused';error='';}},pause(){enabled=false;},resume(){enabled=true;next=0;}};

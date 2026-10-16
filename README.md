@@ -36,7 +36,7 @@ See [publishing and storage details / 发布步骤与数据说明](docs/UPDATES.
 
 ## Support / 支持范围
 
-Version 0.22.0 targets Windows 10/11 x64. **A1 mini, A1 and P1S** support LAN connection, calibration, streamed drawing and full-file upload. **A1 / P1S support is experimental and has not been tested on physical hardware.** Model detection, motion bounds, task packaging and simulated workflows are tested. Preview is a simulation, not a position sensor. See [model support and references](docs/MODEL-SUPPORT.txt).
+The app targets Windows 10/11 x64. **A1 mini, A1 and P1S** support LAN connection, calibration, streamed drawing and full-file upload. **A1 / P1S support is experimental and has not been tested on physical hardware.** The current source requires selecting the printer model when adding a device; the saved selection is reused for automatic connections. Model selection, motion bounds, task packaging and simulated workflows are tested. Preview is a simulation, not a position sensor. See [model support and references](docs/MODEL-SUPPORT.txt).
 
 0.22.0 支持 A1 mini、A1、P1S 的局域网连接、校准、分段绘画与整图上传。**A1 / P1S 为实验性适配，已完成代码与模拟流程测试，尚未实机验证。** 画布与校准配置必须匹配实际机型；连接页可一键切换画布。P1S 绘画避开左侧 18 mm，Z 上限 250 mm。预览不是机器位置传感器。
 

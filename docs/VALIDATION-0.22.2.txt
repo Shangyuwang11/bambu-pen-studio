@@ -1,0 +1,37 @@
+Bambu Pen 0.22.2 — release validation
+Date: 2026-10-16
+
+Scope: SVG stroke import and explicit printer model selection.
+The detailed pre-release records are VALIDATION-UNRELEASED-SVG.txt and
+VALIDATION-UNRELEASED-MANUAL-MODEL.txt; this report supersedes their local-only
+packaging status. The user explicitly requested packaging and publishing both
+fixes as a new patch version.
+
+Verified before publication
+- All 22 source suites in scripts/test.cjs passed on version 0.22.2, using
+  Chromium and Electron 44.4.5 with isolated test profiles and mocked printers.
+- Actual portable EXE extraction and version display, required manual model
+  selection, styled open-stroke SVG import, saving, normal close, restart and
+  language/artwork persistence passed. Launcher-based update eligibility passed.
+- All 131 application files match the source; no tests, private profiles,
+  printer access codes or GitHub credentials are included in the package.
+- Source diff checks and release checksum generation passed.
+
+Release artifact
+Bambu-Pen-Studio-0.22.2-win-x64.exe
+Bytes: 165981696
+SHA-256: 8e776487bdac621f43fbedb078585fb93d4eed121b376663e92a886809cb7998
+
+Update compatibility
+The 0.22.1 updater reads GitHub's latest stable release, compares patch versions
+and validates the Windows asset name, URL and SHA-256. This release keeps that
+format. Startup checking is enabled by default, runs after about three seconds
+and repeats every six hours while the application runs. Downloads and installs
+require user action. Live detection will be checked after GitHub publication.
+
+Limits
+No real printer commands were issued for this release. A1/P1S physical testing
+and real-hardware long-duration connection testing remain outstanding. The SVG
+reporter's original file was unavailable; representative failure cases and
+regression fixtures were used. Unsupported SVG features remain documented in
+the release notes. Passing tests does not establish the absence of all bugs.

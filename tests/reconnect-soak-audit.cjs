@@ -27,10 +27,10 @@ tls.connect=(_options,callback)=>{const s=new Socket();sockets.push(s);queueMicr
 function makePrinter(){const p=new Printer({host:pair.ip,servername:pair.serial});const wait=p.waitFor.bind(p);p.waitFor=(fn,ms)=>wait(fn,Math.min(ms,60));printers.push(p);return p;}
 const turn=()=>new Promise(r=>setImmediate(r));
 (async()=>{let bridge,lifecycle,raw;try{
- const p=makePrinter();await p.connect(pair.accessCode);const socket=sockets.at(-1);
+ const p=makePrinter();await p.connect(pair.accessCode);const socket=sockets.at(-1);assert.equal(p.version,null);assert(socket.writes.every(v=>!v.info),'connect must not request or wait for model detection');
  const count=socket.writes.length;await Promise.all(Array.from({length:25},()=>p.fresh({force:true})));assert.equal(socket.writes.length-count,1);assert.equal(p.listenerCount('failure'),0);
  await assert.rejects(p.fresh({force:true,fields:['gcode_file','stg_cur']}),/timed out/);assert(p.connected,'Missing optional fields must not disconnect responding printer');
- await p.fresh({force:true});console.log('PASS real MQTT parser: malformed module filtered, 25 refreshes share one request, missing fields reject without disconnect');
+ await p.fresh({force:true});console.log('PASS real MQTT parser: no model report or request needed, 25 refreshes share one request, missing fields reject without disconnect');
  let failures=0;p.on('failure',()=>failures++);p.fail(Error('Network lost'));socket.emit('error',Error('Late socket error'));p.close();await turn();assert.equal(failures,1);assert.equal(p.connected,false);p.handle(0x90,Buffer.from([0,1,0]));assert.equal(p.connected,false);
  const broken=makePrinter();await broken.connect(pair.accessCode);broken.socket.write=()=>{throw Error('Write failed');};assert.doesNotThrow(()=>broken.heartbeat());assert.equal(broken.connected,false);console.log('PASS error/close races report once; late packets cannot revive dead sockets; heartbeat write errors are contained');
  bridge=createBridge({printerFactory:makePrinter});await bridge.listen(0);

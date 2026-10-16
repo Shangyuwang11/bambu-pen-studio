@@ -14,8 +14,8 @@ class Fake extends EventEmitter {
  try{for(const model of ['a1','p1s']){
   const p=new Fake(model),b=createBridge({printerFactory:()=>p});await b.listen(0);const context=await browser.newContext(),page=await context.newPage(),errors=[];
   try{page.on('pageerror',e=>errors.push(e.message));await page.goto(b.origin);await page.waitForFunction(()=>document.documentElement.dataset.uiBoot==='ready');
-   await page.evaluate(()=>PenNativeShell.go('devices'));await page.locator('#deviceAdd').click();assert.equal(await page.locator('#deviceModel').inputValue(),'auto');
-   await page.locator('#lanIP').fill('192.168.240.10');await page.locator('#lanSerial').fill('TESTMODEL0001');await page.locator('#lanCode').fill('12345678');await page.locator('#devicePair').click();
+   await page.evaluate(()=>PenNativeShell.go('devices'));await page.locator('#deviceAdd').click();assert.equal(await page.locator('#deviceModel').inputValue(),'');assert.equal(await page.locator('#deviceModel option[value=auto]').count(),0);
+   await page.locator('#deviceModel').selectOption(model);await page.locator('#lanIP').fill('192.168.240.10');await page.locator('#lanSerial').fill('TESTMODEL0001');await page.locator('#lanCode').fill('12345678');await page.locator('#devicePair').click();
    await page.waitForFunction(()=>document.querySelector('#deviceState').dataset.connected==='true');
    assert.equal(await page.locator('.device-model-label').textContent(),Models.get(model).name);assert(await page.locator('#deviceModelInfo').textContent().then(t=>t.includes('尚未实机验证')));
    await page.locator('#stepCalibration').click();await page.locator('#calBare').check();assert(await page.locator('#calHome').isDisabled());assert.match(await page.locator('#calHome').getAttribute('title'),/机型/);
@@ -29,22 +29,23 @@ class Fake extends EventEmitter {
    await page.evaluate(()=>{PenNativeShell.go('devices');PenI18n.setLanguage('en');});await page.waitForTimeout(100);
    assert.match(await page.locator('#deviceModelInfo').textContent(),/not.*hardware/i);
    await page.screenshot({path:path.join(__dirname,'..','test-output',model+'-connection.png')});
-   assert.deepEqual(p.commands,[]);assert.deepEqual(errors,[]);console.log('PASS '+model+' actual UI: pairing, detected model, canvas match, calibration enabled, speed caps and bilingual notice');
+   assert.deepEqual(p.commands,[]);assert.deepEqual(errors,[]);console.log('PASS '+model+' actual UI: required model selection, pairing, canvas match, calibration enabled, speed caps and bilingual notice');
   }finally{await context.close();await b.close();}
  }
  for(const model of ['a1','a1-mini','p1s']){
-  const p=new Fake(model);delete p.version[0].project_name;let saved;
-  const b=createBridge({printerFactory:()=>p,onCredentials:v=>{saved=v;}});await b.listen(0);const page=await browser.newPage();
+  const p=new Fake(model);p.version=null;let saved,calls=0;
+  const b=createBridge({printerFactory:()=>{calls++;return p;},onCredentials:v=>{saved=v;}});await b.listen(0);const page=await browser.newPage();
   try{
    await page.goto(b.origin);await page.waitForFunction(()=>document.documentElement.dataset.uiBoot==='ready');await page.evaluate(()=>PenNativeShell.go('devices'));await page.locator('#deviceAdd').click();
-   await page.locator('#lanIP').fill('192.168.240.10');await page.locator('#lanSerial').fill('TESTMODEL0001');await page.locator('#lanCode').fill('12345678');await page.locator('#devicePair').click();await page.waitForFunction(()=>document.getElementById('deviceModelDialog').open);
-   assert.deepEqual(await page.locator('.device-model-choice').evaluateAll(nodes=>nodes.map(n=>n.dataset.model)),model==='p1s'?['p1s']:['a1-mini','a1']);assert.equal(await page.locator('#deviceError').isVisible(),false);
-   await page.locator('#deviceModelCancel').click();assert.equal(await page.locator('#lanCode').inputValue(),'12345678');assert.equal(await page.locator('#lanSerial').inputValue(),'TESTMODEL0001');
-   await page.evaluate(()=>PenI18n.setLanguage('en'));await page.locator('#devicePair').click();await page.waitForFunction(()=>document.getElementById('deviceModelDialog').open);await page.waitForFunction(()=>document.getElementById('deviceModelTitle').textContent==='Select your printer model');
-   await page.screenshot({path:path.join(__dirname,'..','test-output',model+'-model-picker.png')});await page.locator('.device-model-choice[data-model="'+model+'"]').click();await page.waitForFunction(()=>document.querySelector('#deviceState').dataset.connected==='true');
+   await page.locator('#lanIP').fill('192.168.240.10');await page.locator('#lanSerial').fill('TESTMODEL0001');await page.locator('#lanCode').fill('12345678');await page.locator('#devicePair').click();
+   assert.equal(await page.locator('#deviceModel').evaluate(n=>n.validity.valueMissing),true);assert.equal(calls,0);assert.equal(await page.locator('#deviceModelDialog').evaluate(n=>n.open),false);
+   assert.equal(await page.locator('#lanCode').inputValue(),'12345678');assert.equal(await page.locator('#lanSerial').inputValue(),'TESTMODEL0001');
+   await page.evaluate(()=>PenI18n.setLanguage('en'));await page.waitForFunction(()=>document.querySelector('#deviceModel option[value=""]').textContent==='Choose your printer model');
+   await page.locator('#deviceModel').selectOption(model);await page.screenshot({path:path.join(__dirname,'..','test-output',model+'-model-picker.png')});await page.locator('#devicePair').click();await page.waitForFunction(()=>document.querySelector('#deviceState').dataset.connected==='true');
    assert.equal(saved.model,model);assert.equal(saved.accessCode,'12345678');assert.deepEqual(p.commands,[]);
    await b.disconnect();await b.connect(saved);assert.equal(b.snapshot().device.model,model);assert.deepEqual(p.commands,[]);
-   console.log('PASS '+model+' missing model: picker, cancel, credentials retained, bilingual, one-click connect, saved model reconnect, no motion');
+   await page.locator('#deviceEdit').click();assert.equal(await page.locator('#deviceModel').inputValue(),model);
+   console.log('PASS '+model+' no firmware identity: selection required before network I/O, bilingual, one-click connect, saved model reconnect/edit, no motion');
   }finally{await page.close();await b.close();}
  }
  }finally{await browser.close();}

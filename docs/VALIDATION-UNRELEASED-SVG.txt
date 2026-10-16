@@ -1,0 +1,60 @@
+Bambu Pen: SVG stroke import fix (unreleased)
+Date: 2026-10-16
+
+Scope
+- Local source changes only. Version remains 0.22.1.
+- No executable build, publication, installed-app replacement or real printer commands.
+- No personal settings or artwork used by the tests.
+
+Confirmed causes
+- PenImport.svg calls the custom PenSVG.read parser in svg-import.js, not NanoSVG.
+- Plain fill="none" stroke="black" paths already worked.
+- Inline style attributes and style elements were rejected, preventing common
+  editor-exported stroke-only files from importing. Reproduced before the fix.
+- Detached circle/ellipse/rounded-rectangle measurement could throw an
+  InvalidStateError in Chromium. Reproduced while adding basic-shape coverage.
+
+Implementation
+- Resolve supported inline paint styles and stylesheet rules without inserting
+  imported SVG or CSS into the application document.
+- Honor presentation attributes, inline style, simple stylesheet selectors,
+  specificity, important, inherited paint, currentColor, visibility and opacity.
+- Preserve stroke centerlines and open endpoints. Do not expand strokes into
+  two outlines or duplicate geometry with both fill and stroke.
+- Skip invisible paint and unpainted lines.
+- Convert validated numeric basic shapes to paths before measuring curves.
+  Preserve exact segment endpoints and closed-shape joins.
+- Keep calibration-profile nib width as the actual drawing width.
+- Add English translations for new errors and register the SVG regression suite.
+
+Validation passed
+- tests/svg-strokes-audit.cjs: 12 scenario groups in real Chromium, including
+  style cascade, 10 invisible-paint variants, six transformed shape types,
+  independent expected geometry bounds, sharp corners, closed curves,
+  detached-style isolation, external-resource rejection and nesting limits.
+  Actual file input -> editable layer -> plot plan -> SVG export -> reload.
+  Failed import preserves artwork and allows the next import. English errors.
+- tests/workspace-workflows-audit.cjs: real UI artwork/image workflows,
+  undo/redo, conversion modes, erase, export and persistence.
+- tests/image-edge-audit.cjs: invalid imports, conversion recovery,
+  slider stability and late-worker isolation.
+- tests/geometry-scenarios-audit.cjs: 450 seeded scenarios; 412 drawable,
+  38 fully clipped, 9,981 points checked for physical drawing bounds.
+- Syntax checks and git diff --check.
+
+Limits
+- The reporting user's original SVG was not supplied. Representative cases
+  reproduce and verify the confirmed bugs; arbitrary SVG compatibility is not
+  established by these tests.
+- This remains a geometry importer, not a complete SVG renderer. External
+  references, scripts, text/use elements, gradients, clipping/masking, dashed
+  strokes, CSS transforms and advanced selectors remain unsupported.
+- Paths are fitted using the existing artwork normalization behavior. SVG
+  stroke-width does not override the physical pen width in calibration settings.
+- No real-printer behavior changed or required testing for this import fix.
+
+Library clarification
+NanoSVG is not a dependency here. Its parser's NSVGshape contains both fill and
+stroke paint, strokeWidth and dash metadata; the README's separate rasterizer
+section should not be interpreted as a parser limitation.
+https://github.com/memononen/nanosvg/blob/master/src/nanosvg.h

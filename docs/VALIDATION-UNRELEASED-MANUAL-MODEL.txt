@@ -1,0 +1,38 @@
+Bambu Pen: explicit printer model selection (unreleased)
+Date: 2026-10-16
+
+Behavior
+- New device forms start with an empty required model selection: A1 mini,
+  A1 or P1S. There is no Auto-detect option and no assumed default model.
+- Pairing uses the selected model for the machine envelope and task package.
+- MQTT login requests printer status, without requesting or waiting for a
+  firmware model report. Status, authentication and TLS checks remain active.
+- Saved models are reused for automatic reconnect. Existing saved IP, serial,
+  access code, artwork and calibration profiles are retained.
+- Legacy saved printers without a model ask for a selection before network I/O;
+  they do not repeatedly connect while waiting for model information.
+- Saving identical connection settings preserves the current session and
+  calibration. Changing the selected model creates a new session and clears
+  its current position so the previous model's coordinates are not reused.
+- Connection labels and selection help are available in Chinese and English.
+
+Validation
+- The standard 19 browser/Node suites passed with isolated profiles and mock
+  printers, including the preceding SVG import fix.
+- Explicit selection tested for all three models with no firmware identity.
+  Browser required-field validation prevents unselected connection attempts.
+- Backend rejects absent, auto and unsupported model values before opening a
+  socket. Legacy credentials survive selection and subsequent reconnection.
+- Model-specific motion, calibration, job completion/cancellation, repeat jobs,
+  file metadata, safe envelope and connection-state tests passed in simulation.
+- Actual MQTT parser tested with no version response: login, status refresh,
+  72 simulated idle hours, 12 network outages, sleep/wake and shutdown.
+- An additional real Electron test passed with an isolated test profile:
+  encrypted credential editing/reuse, legacy model selection, language changes,
+  delayed replies and printer/artwork/calibration persistence across restart.
+- Syntax checks and git diff --check passed.
+
+Scope
+- Local source only; package version remains 0.22.1.
+- No release build, GitHub publication or installed-app replacement.
+- Tests do not connect to a real printer or use personal settings.

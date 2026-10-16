@@ -1,0 +1,23 @@
+Bambu Pen 0.22.2
+
+中文
+- 修复 SVG 描边导入：支持 style 属性和 CSS 类中的常见描边样式、继承和可见性，保留原始单条路径，不展开成双边轮廓。
+- 修复圆、椭圆和圆角矩形可能导入失败的问题。实际绘画线宽仍使用校准配置中的笔芯宽度。
+- 添加打印机时必须手动选择 A1 mini、A1 或 P1S，移除自动识别，不再请求或等待固件返回型号。
+- 保存所选机型后继续自动连接。旧资料缺少机型时只需补选一次，保留已有 IP、访问码、作品和校准配置。
+
+English
+- Fixed SVG stroke imports using inline styles and CSS classes, including common paint inheritance and visibility. Original centerlines are retained without expanding strokes into double outlines.
+- Fixed imports of circles, ellipses and rounded rectangles. Physical drawing width continues to use the nib width in the calibration profile.
+- Adding a printer now requires selecting A1 mini, A1 or P1S. Removed automatic model detection and the wait for firmware model reports.
+- Saved model selections are reused for automatic connection. Older records without a model need one selection; existing credentials, artwork and calibration profiles remain saved.
+
+Validation / 验证
+22 source test suites passed, including simulated printer workflows and actual desktop UI tests. The portable EXE passed launch, styled SVG import, save, close and restart checks with isolated data. Package contents were compared with source files and checked for private data.
+22 套源码测试通过，包括模拟打印机流程及实际桌面界面测试。便携 EXE 已通过启动、样式 SVG 导入、保存、关闭和重开验证；安装包已核对源码一致性及个人数据排除情况。
+
+Windows 10/11 x64. Download the EXE below or use Settings > Updates in a compatible earlier version.
+Windows 10/11 x64。下载下方 EXE，或在支持更新功能的旧版本中打开「设置 → 更新」。
+
+A1 / P1S support remains experimental and has not been tested on physical hardware. SVG importing remains limited to supported geometry and paint styles; text, external references, masks, gradients and dashed strokes are not supported.
+A1 / P1S 仍为实验性适配，尚未进行实机验证。SVG 导入支持范围仍限于几何路径及支持的绘画样式，不支持文字、外部引用、遮罩、渐变和虚线描边。

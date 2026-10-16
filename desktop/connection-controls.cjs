@@ -1,4 +1,5 @@
 'use strict';
+const Models=require('../printer-models.js');
 // User auto-connect preference is separate from temporary pause during close/wake.
 function createConnectionControls({bridge,autoConnect,loadPair=async()=>null,load=()=>null,save=()=>{}}){
  let working=false;const stored=load();autoConnect.setUserEnabled(stored?.enabled!==false);
@@ -11,13 +12,12 @@ function createConnectionControls({bridge,autoConnect,loadPair=async()=>null,loa
   finally{autoConnect.resume();working=false;}
  }
  async function pairingValue(value){
-  const next={ip:String(value?.ip||'').trim(),serial:String(value?.serial||'').trim(),accessCode:String(value?.accessCode||'').trim(),model:value?.model||'auto'};
+  const next={ip:String(value?.ip||'').trim(),serial:String(value?.serial||'').trim(),accessCode:String(value?.accessCode||'').trim(),model:Models.identity(value?.model).model};
   let saved;
-  if(!next.accessCode||next.model==='auto')try{saved=await loadPair();}catch(e){if(!next.accessCode)throw e;}
+  if(!next.accessCode)saved=await loadPair();
   const same=saved?.serial===next.serial;
   // Match the printer identity, not its IP: DHCP can change the address.
   if(!next.accessCode){if(!same)throw Error('请填写这台打印机的 8 位访问码');next.accessCode=saved.accessCode;}
-  if(same&&next.model==='auto'&&saved.model)next.model=saved.model;
   return next;
  }
  return{

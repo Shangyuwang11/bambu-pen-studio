@@ -8,7 +8,7 @@ class Printer extends EventEmitter {
  async connect(code){
   if(!/^[A-Za-z0-9]{8}$/.test(code))throw Error('Invalid access code');
   if(this.socket)throw Error('Already initialized');
-  const ready=this.waitFor(()=>this.connected&&this.full&&!!this.version,20000);
+  const ready=this.waitFor(()=>this.connected&&this.full,20000);
   ready.catch(()=>{});
   try{
   this.socket=tls.connect({...this.options,port:8883,rejectUnauthorized:true,minVersion:'TLSv1.2'},()=>{
@@ -90,7 +90,7 @@ class Printer extends EventEmitter {
   const type=h>>4;
   if(type===13){if(b.length)throw Error('Invalid MQTT ping response');return;}
   if(type===2){if(b.length!==2||b[1]!==0)throw Error('Printer login rejected');this.socket.write(packet(0x82,Buffer.concat([Buffer.from([0,1]),utf('device/'+this.options.servername+'/report'),Buffer.from([0])])));return;}
-  if(type===9){if(b.length<3||b.readUInt16BE(0)!==1||b[2]===128)throw Error('Subscription rejected');this.connected=true;this.publish('info','get_version');this.publish('pushing','pushall',{version:1,push_target:1});return;}
+  if(type===9){if(b.length<3||b.readUInt16BE(0)!==1||b[2]===128)throw Error('Subscription rejected');this.connected=true;this.publish('pushing','pushall',{version:1,push_target:1});return;}
   if(type!==3)return;
   if(b.length<2)throw Error('Malformed MQTT message');const n=b.readUInt16BE(0);let p=n+2;if(p>b.length)throw Error('Invalid topic');const topic=b.subarray(2,p).toString();if(((h>>1)&3)===1){if(p+2>b.length)throw Error('Missing packet id');this.socket.write(packet(0x40,b.subarray(p,p+2)));p+=2;}else if((h>>1)&3)throw Error('Unexpected MQTT QoS');
   if(topic!=='device/'+this.options.servername+'/report')return;const j=JSON.parse(b.subarray(p).toString());

@@ -20,18 +20,14 @@ function scene(model){
 async function check(name,fn){await fn();console.log('PASS '+name);}
 async function settled(b){for(let n=0;n<500;n++){if(!b.snapshot().busy){assert.notEqual(b.snapshot().run.status,'failed',JSON.stringify(b.snapshot().run));return b.snapshot();}await new Promise(r=>setTimeout(r,5));}throw Error('Mock did not settle');}
 (async()=>{
- await check('N1 / N2S / C12 identify models, AP05 alone never chooses a bed',()=>{
-  for(const model of ['a1-mini','a1','p1s']){const m=Models.get(model);assert.equal(Models.detect([{name:'esp32',hw_ver:m.hardware,project_name:m.project}]).model,model);assert.equal(Models.detect([{name:'esp32',hw_ver:m.hardware}],model).model,model);}
-  assert.throws(()=>Models.detect([{name:'esp32',hw_ver:'AP05'}]),/选择/);
-  assert.throws(()=>Models.detect([{name:'rv1126',hw_ver:'AP05'}]),/无法识别/);
-  assert.throws(()=>Models.detect([{name:'esp32',project_name:'C11',hw_ver:'AP04'}],'p1s'),/不支持/);
-  assert.throws(()=>Models.detect([{name:'esp32',project_name:'N2S'}],'a1-mini'),/不一致/);
-  assert.throws(()=>Models.detect([{name:'esp32',hw_ver:'AP04'}],'a1'),/选择/);
+ await check('Model must be selected explicitly; no automatic identity or default bed',()=>{
+  for(const model of ['a1-mini','a1','p1s']){assert.equal(Models.identity(model).model,model);assert.equal(Models.identity(model).source,'selected');}
+  for(const model of [undefined,null,'','auto','x1','AP05'])assert.throws(()=>Models.identity(model),e=>{assert.deepEqual(Models.selectionOptions(e),['a1-mini','a1','p1s']);return /请选择打印机型号/.test(e.message);});
  });
  await check('MQTT version parsing preserves the actual project identifier',()=>{
   const p=new Printer({servername:serial}),topic=Buffer.from('device/'+serial+'/report'),len=Buffer.alloc(2);len.writeUInt16BE(topic.length);
   p.handle(0x30,Buffer.concat([len,topic,Buffer.from(JSON.stringify({info:{command:'get_version',module:[{name:'esp32',hw_ver:'AP05',project_name:'N2S'}]}}))]));
-  assert.equal(Models.detect(p.version).model,'a1');
+  assert.equal(p.version[0].project_name,'N2S');
  });
  for(const model of ['a1-mini','a1','p1s']){
   const {s,p,start,m}=scene(model),job=Job.prepare(s,p,start),fake=new Fake(model);
@@ -71,18 +67,18 @@ async function settled(b){for(let n=0;n<500;n++){if(!b.snapshot().busy){assert.n
   });
   await check(model+': pairing, homing, calibration and next-job lifecycle through actual bridge',async()=>{
    let saved;const printer=new Fake(model),b=createBridge({printerFactory:()=>printer,onCredentials:v=>{saved=v;}});try{
-    await b.connect(pair);assert.equal(b.snapshot().device.model,model);assert.equal(saved.model,model);assert.equal(printer.commands.length,0);
+    await b.connect({...pair,model});assert.equal(b.snapshot().device.model,model);assert.equal(saved.model,model);assert.equal(printer.commands.length,0);
     const wrong=scene(model==='a1-mini'?'a1':'a1-mini').p;
     await assert.rejects(b.action('wizard/finish',{profile:wrong}),/不一致/);assert.equal(printer.commands.length,0);
     await b.action('wizard/home',{bare:true});let snap=await settled(b);assert.equal(snap.wizard.phase,'install');assert.deepEqual(snap.position,m.park);
     const id=snap.wizard.id;await b.action('wizard/installed',{id,installed:true});await b.action('wizard/jog',{id,delta:-40,continuous:true});snap=await settled(b);assert.equal(snap.position.z,20);
     await b.action('wizard/finish',{id,contact:true,lift:2,profile:p});snap=await settled(b);assert(snap.motionReference.ready);assert.equal(snap.wizard.profile.downZ,20);
-    const commandsBeforeSave=printer.commands.length,positionBeforeSave={...snap.position};await b.connect({...pair,model:'auto'});snap=b.snapshot();assert(snap.motionReference.ready);assert.equal(snap.wizard.id,id);assert.deepEqual(snap.position,positionBeforeSave);assert.equal(printer.commands.length,commandsBeforeSave);
+    const commandsBeforeSave=printer.commands.length,positionBeforeSave={...snap.position};await b.connect({...pair,model});snap=b.snapshot();assert(snap.motionReference.ready);assert.equal(snap.wizard.id,id);assert.deepEqual(snap.position,positionBeforeSave);assert.equal(printer.commands.length,commandsBeforeSave);
     const profile=snap.wizard.profile;await b.action('prepare',{state:s,profile,position:snap.position});snap=b.snapshot();
     await b.action('start',{id:snap.prepared.id,sha256:snap.prepared.sha256,observedStart:true,clearRoute:true});snap=await settled(b);
     assert(snap.motionReference.ready);assert.deepEqual(snap.position,m.park);
     await b.action('prepare',{state:s,profile,position:snap.position});assert(b.snapshot().prepared);assert.equal(printer.commands.filter(c=>/\bG28\b/.test(c.param||'')).length,1);
-    printer.state.home_flag=0;await b.connect(pair);assert.equal(b.snapshot().position,null);assert.equal(b.snapshot().motionReference.ready,false);assert.equal(b.snapshot().wizard.profile.downZ,20);
+    printer.state.home_flag=0;await b.connect({...pair,model});assert.equal(b.snapshot().position,null);assert.equal(b.snapshot().motionReference.ready,false);assert.equal(b.snapshot().wizard.profile.downZ,20);
    }finally{await b.close();}
   });
   await check(model+': complete upload is read back, started with correct fields and can be repeated',async()=>{
@@ -99,7 +95,7 @@ async function settled(b){for(let n=0;n<500;n++){if(!b.snapshot().busy){assert.n
   await check(model+': full-file finish, speed changes, cancellation and next job retain calibration through bridge',async()=>{
    const printer=new Fake(model),b=createBridge({printerFactory:()=>printer,ftpFactory:()=>({async connect(){},async login(){},async uploadVerified(filename,buffer){return{bytes:buffer.length,readbackVerified:true,sha256:crypto.createHash('sha256').update(buffer).digest('hex')};},async finish(){},close(){}})});
    try{
-    await b.connect(pair);await b.action('wizard/home',{bare:true});let snap=await settled(b),id=snap.wizard.id;
+    await b.connect({...pair,model});await b.action('wizard/home',{bare:true});let snap=await settled(b),id=snap.wizard.id;
     await b.action('wizard/installed',{id,installed:true});await b.action('wizard/jog',{id,delta:-40,continuous:true});await settled(b);
     await b.action('wizard/finish',{id,contact:true,lift:2,profile:p});snap=await settled(b);const profile=snap.wizard.profile;
     for(const outcome of ['complete','stop','complete']){
@@ -118,7 +114,7 @@ async function settled(b){for(let n=0;n<500;n++){if(!b.snapshot().busy){assert.n
    let storedReceipt=null,storedMemory=null,printer;
    const b=createBridge({printerFactory:()=>printer=new Fake(model),loadPositionReceipt:()=>storedReceipt,savePositionReceipt:v=>storedReceipt=v,loadCalibrationReference:()=>storedMemory,saveCalibrationReference:v=>storedMemory=v});
    try{
-    await b.connect(pair);const park={x:m.w-22,y:m.h-24,z:m.z-3},profile={...p,downZ:m.z-8,upZ:m.z-6};
+    await b.connect({...pair,model});const park={x:m.w-22,y:m.h-24,z:m.z-3},profile={...p,downZ:m.z-8,upZ:m.z-6};
     const saved=P.capture({device:{serial},busy:false,position:park,wizard:{phase:'complete',profile,contact:{downZ:profile.downZ,upZ:profile.upZ},calibrationPoint:{...park,z:profile.downZ},returnTo:park}},'Saved '+model,{penSettings:s.pen});
     await b.action('position',{position:park,observed:true});await b.action('wizard/activate-preset',{preset:saved,unchanged:true});assert(b.snapshot().motionReference.ready);
     printer.close();await b.connect({...pair,model});assert.equal(printer.commands.length,0);assert(b.snapshot().motionReference.canReusePosition);
@@ -149,8 +145,11 @@ async function settled(b){for(let n=0;n<500;n++){if(!b.snapshot().busy){assert.n
    session.attach(new Fake(model==='p1s'?'a1':'p1s'),serial);assert.equal(session.completedPosition(),null);session.detach();
   });
  }
- await check('Unsupported or wrong manual pairing closes connection without sending motion',async()=>{
-  const p=new Fake('a1');p.version=[{name:'esp32',hw_ver:'AP05'}];const b=createBridge({printerFactory:()=>p});try{await assert.rejects(b.connect(pair),/选择/);assert(!p.connected);assert.equal(p.commands.length,0);await b.connect({...pair,model:'a1'});assert.equal(b.snapshot().device.model,'a1');}finally{await b.close();}
+ await check('Missing model is rejected before network I/O; absent firmware identity does not block a selected model',async()=>{
+  let count=0;const p=new Fake('a1');p.version=null;const b=createBridge({printerFactory:()=>{count++;return p;}});try{for(const model of [undefined,'auto','x1'])await assert.rejects(b.connect({...pair,model}),/请选择打印机型号/);assert.equal(count,0);assert.equal(p.commands.length,0);await b.connect({...pair,model:'a1'});assert.equal(b.snapshot().device.model,'a1');assert.equal(count,1);}finally{await b.close();}
+ });
+ await check('Changing the selected model replaces the session instead of reusing old model coordinates',async()=>{
+  const connections=[];const b=createBridge({printerFactory:()=>{const p=new Fake('a1');p.version=null;connections.push(p);return p;}});try{await b.connect({...pair,model:'a1'});await b.action('wizard/home',{bare:true});await settled(b);assert(b.snapshot().position);await b.connect({...pair,model:'p1s'});const s=b.snapshot();assert.equal(s.device.model,'p1s');assert.equal(s.position,null);assert.equal(s.wizard,null);assert.equal(connections.length,2);assert.equal(connections[0].connected,false);assert.equal(connections[1].commands.length,0);}finally{await b.close();}
  });
 })().catch(e=>{console.error(e);process.exitCode=1;});
 

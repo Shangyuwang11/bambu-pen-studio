@@ -1,4 +1,4 @@
-Bambu Pen 0.22.0 — machine support
+Bambu Pen — machine support (source updated 2026-10-16)
 
 Model      Project ID   Hardware  XY travel    Z limit   Pen lift cap
 A1 mini    N1           AP05      180 x 180    180 mm    30 mm/s
@@ -17,11 +17,11 @@ path clipping also include the measured pen offset. The 256 x 256 plate shape
 does not imply the pen can draw on every part of it. Default mount distance
 37.5 mm is editable and must be measured for each actual holder.
 
-Connection identifies project_name from the controller/OTA modules. AP05 alone
-cannot distinguish A1 from A1 mini. When older firmware omits project_name,
-select the actual model in Printer; its controller family must still match.
-A reported model cannot be overridden with a contradictory manual selection.
-Saved pairing retains the selected/resolved model for automatic reconnect.
+Adding a printer requires an explicit A1 mini, A1 or P1S selection. Connection
+uses that selection and does not request or wait for a firmware model report.
+Saved pairing retains the selected model for automatic reconnect. Legacy saved
+records without a model ask for one choice while preserving IP, serial and
+access code. The selected model determines the motion envelope and task package.
 
 The Printer page offers Use this printer canvas when the design differs.
 Artwork and paper remain in place. Saved calibration profiles are retained;
@@ -48,6 +48,7 @@ https://github.com/greghesp/ha-bambulab/issues/1500
 本版开放 A1、P1S 的连接、校准、分段与整图任务，为实验性适配。
 测试使用模拟打印机，不代表 A1 / P1S 实机已经验证。机型、校准高度、
 返回点、任务包和抬笔速度分别处理，不再沿用 A1 mini 的 180 mm 限制。
-AP05 同时用于 A1 和 A1 mini，因此需读取具体型号；识别不完整时请在
-连接页手动选实际机型。保存后会记住，不会清空已有作品或校准配置。
+添加打印机时必须选择实际机型：A1 mini、A1 或 P1S，不再自动识别，
+连接也不等待固件返回型号。保存后沿用所选机型自动连接；缺少机型的
+旧资料只需补选一次，保留 IP、序列号、访问码、已有作品和校准配置。
 P1S 按官方默认配置使用 250 mm Z 上限，并保守避开左侧 18 mm 绘画区域。
